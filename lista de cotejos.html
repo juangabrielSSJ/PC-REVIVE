@@ -453,17 +453,26 @@ table.cotejo tr:nth-child(even) td{background:#fafafa;}
 </div>
 
 <script>
+
+
+
+  
 let GROQ_KEY = '';
 let numSemanas = 1;
-// SYS_PASS ya no va aquí — está en el servidor
 
-async function intentarLogin(){
+function intentarLogin(){
   const pass    = document.getElementById('inp-pass').value.trim();
   const apikey  = document.getElementById('inp-apikey').value.trim();
   const errEl   = document.getElementById('login-err');
   const btnLogin = document.querySelector('.btn-login');
-
   errEl.style.display = 'none';
+
+  const hashIngresado = btoa(pass + 'pdc_salt_2026');
+  if(btoa('pdc2026' + 'pdc_salt_2026') !== hashIngresado){
+    errEl.style.display = 'block';
+    errEl.textContent = '⚠️ Contraseña incorrecta.';
+    return;
+  }
 
   if(!apikey.startsWith('gsk_')){
     errEl.style.display = 'block';
@@ -471,35 +480,9 @@ async function intentarLogin(){
     return;
   }
 
-  btnLogin.disabled = true;
-  btnLogin.textContent = 'Verificando...';
-
-  try {
-    const resp = await fetch('/.netlify/functions/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pass, apikey: apikey })
-    });
-    const data = await resp.json();
-
-    if(!data.ok){
-      errEl.style.display = 'block';
-      errEl.textContent = '⚠️ ' + (data.error || 'Contraseña incorrecta');
-      return;
-    }
-
-    // Login correcto — aquí va lo que hacía antes después del login
-    GROQ_KEY = apikey;
-    document.getElementById('pantalla-login').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-
-  } catch(e) {
-    errEl.style.display = 'block';
-    errEl.textContent = '⚠️ Error de conexión. Intenta de nuevo.';
-  } finally {
-    btnLogin.disabled = false;
-    btnLogin.textContent = 'Ingresar →';
-  }
+  GROQ_KEY = apikey;
+  document.getElementById('pantalla-login').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
 }
 // criterios[semanaIdx] = { ser:[...], hacer:[...], saber:[...] }
 let criteriosData = [];

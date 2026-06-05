@@ -456,63 +456,41 @@ table.rubrica tr:nth-child(even) td{background:#f8fdfb;}
 </div><!-- /app -->
 
 <script>
-// ════════════════════════════════════════════
-//  CONFIGURACIÓN
 let GROQ_KEY = '';
 let numSemanas = 1;
+let criteriosData = [];
 
-function intentarLogin(){
-  const pass    = document.getElementById('inp-pass').value.trim();
-  const apikey  = document.getElementById('inp-apikey').value.trim();
-  const errEl   = document.getElementById('login-err');
-  const btnLogin = document.querySelector('.btn-login');
-  errEl.style.display = 'none';
-
-  const hashIngresado = btoa(pass + 'pdc_salt_2026');
-  if(btoa('pdc2026' + 'pdc_salt_2026') !== hashIngresado){
-    errEl.style.display = 'block';
-    errEl.textContent = '⚠️ Contraseña incorrecta.';
-    return;
-  }
-
-  if(!apikey.startsWith('gsk_')){
-    errEl.style.display = 'block';
-    errEl.textContent = '⚠️ La API Key debe comenzar con "gsk_".';
-    return;
-  }
-
-  GROQ_KEY = apikey;
-  document.getElementById('pantalla-login').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-}
-// ════════════════════════════════════════════
-//  LOCK / UNLOCK
-// ════════════════════════════════════════════
+// ── LOCK ──
 function unlock(){
-  const p1 = document.getElementById('pass1').value.trim();
-  const p2 = document.getElementById('pass2').value.trim();
+  const p1  = document.getElementById('pass1').value.trim();
+  const p2  = document.getElementById('pass2').value.trim();
   const err = document.getElementById('lockErr');
-  if(p1 !== SYS_PASS){ err.textContent='Contraseña incorrecta.'; return; }
-  if(!p2.startsWith('gsk_') && !p2.startsWith('groq')&&p2.length<20){
-    err.textContent='Ingresa una clave API de Groq válida.'; return;
+
+  const hashIngresado = btoa(p1 + 'pdc_salt_2026');
+  if(btoa('pdc2026' + 'pdc_salt_2026') !== hashIngresado){
+    err.textContent = 'Contraseña incorrecta.';
+    return;
+  }
+  if(p2.length < 20){
+    err.textContent = 'Ingresa una clave API de Groq válida.';
+    return;
   }
   GROQ_KEY = p2;
-  err.textContent='';
-  document.getElementById('lockScreen').style.display='none';
-  document.getElementById('app').style.display='block';
+  err.textContent = '';
+  document.getElementById('lockScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
   setWeeks(1, document.querySelector('.week-opt.active'));
 }
 
 function logout(){
-  GROQ_KEY='';
-  document.getElementById('lockScreen').style.display='flex';
-  document.getElementById('app').style.display='none';
-  document.getElementById('pass1').value='';
-  document.getElementById('pass2').value='';
+  GROQ_KEY = '';
+  document.getElementById('lockScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('pass1').value = '';
+  document.getElementById('pass2').value = '';
 }
 
-document.addEventListener('keydown',e=>{ if(e.key==='Enter') unlock(); });
-
+document.addEventListener('keydown', e=>{ if(e.key==='Enter') unlock(); });
 // ════════════════════════════════════════════
 //  SEMANAS
 // ════════════════════════════════════════════

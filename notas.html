@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cargador de Notas SIE · v4</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Paleta clara · minimalista · académica moderna */
+    --bg:        #fafaf7;          /* crema casi blanco */
+    --surface:   #ffffff;
+    --surface-2: #f5f5f0;
+    --border:    #e8e8e0;
+    --border-2:  #d4d4cc;
+    --ink:       #1a1a1a;
+    --ink-2:     #4a4a48;
+    --muted:     #8a8a82;
+    --faded:     #b8b8b0;
+
+    /* Acentos */
+    --indigo:     #4338ca;          /* primario */
+    --indigo-50:  #eef2ff;
+    --indigo-100: #e0e7ff;
+    --indigo-700: #3730a3;
+    --amber:      #d97706;          /* destacar */
+    --amber-50:   #fffbeb;
+    --amber-100:  #fef3c7;
+    --emerald:    #059669;          /* éxito */
+    --emerald-50: #ecfdf5;
+    --emerald-100:#d1fae5;
+    --rose:       #e11d48;          /* error */
+    --rose-50:    #fff1f2;
+    --rose-100:   #ffe4e6;
+
+    --sans: 'Manrope', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'Courier New', monospace;
+
+    --shadow-xs: 0 1px 2px rgba(20,20,20,0.04);
+    --shadow-sm: 0 1px 3px rgba(20,20,20,0.05), 0 1px 2px rgba(20,20,20,0.03);
+    --shadow-md: 0 4px 12px rgba(20,20,20,0.04), 0 2px 4px rgba(20,20,20,0.03);
+    --shadow-lg: 0 12px 32px rgba(20,20,20,0.06), 0 4px 8px rgba(20,20,20,0.04);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  body { min-height: 100vh; font-weight: 400; line-height: 1.5; }
+
+  /* ── BACKGROUND TEXTURE ───────────────────────────────── */
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(67,56,202,0.04) 0, transparent 50%),
+      radial-gradient(circle at 80% 100%, rgba(217,119,6,0.03) 0, transparent 50%);
+  }
+
+  /* ── TOPBAR ────────────────────────────────────────────── */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(8px);
+  }
+  .brand {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .brand-mark {
+    width: 36px; height: 36px;
+    background: var(--ink);
+    color: var(--surface);
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 11px;
+    border-radius: 8px;
+    display: grid; place-items: center;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+  }
+  .brand-mark::after {
+    content: ''; position: absolute; inset: auto 0 0 0; height: 4px;
+    background: linear-gradient(90deg, var(--indigo), var(--amber), var(--emerald));
+  }
+  .brand-text h1 {
+    font-size: 16px; font-weight: 700; letter-spacing: -0.01em;
+  }
+  .brand-text .tag {
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+  .topbar-end {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .version-pill {
+    font-family: var(--mono); font-size: 11px;
+    background: var(--surface-2);
+    color: var(--ink-2);
+    padding: 4px 10px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── LAYOUT ────────────────────────────────────────────── */
+  .main {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 36px 24px 80px;
+    position: relative; z-index: 1;
+  }
+
+  .intro {
+    margin-bottom: 28px;
+  }
+  .intro h2 {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+  }
+  .intro p {
+    color: var(--ink-2); font-size: 14px;
+  }
+  .intro p .hot {
+    color: var(--indigo); font-weight: 600;
+  }
+
+  /* ── STEPS PROGRESS ────────────────────────────────────── */
+  .steps {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+  .step {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    transition: background .2s;
+    position: relative;
+  }
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    color: var(--muted);
+    display: grid; place-items: center;
+    font-family: var(--mono); font-size: 12px; font-weight: 600;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    transition: all .25s;
+  }
+  .step-label {
+    font-size: 12px; font-weight: 500; color: var(--muted);
+    line-height: 1.3;
+    transition: color .2s;
+  }
+  .step.active .step-num {
+    background: var(--ink); color: var(--surface); border-color: var(--ink);
+  }
+  .step.active .step-label { color: var(--ink); font-weight: 600; }
+  .step.done .step-num {
+    background: var(--emerald-50); color: var(--emerald); border-color: var(--emerald-100);
+  }
+  .step.done .step-num::before {
+    content: '✓'; font-size: 14px;
+  }
+  .step.done .step-num span { display: none; }
+  .step.done .step-label { color: var(--emerald); }
+
+  /* ── PANELS ────────────────────────────────────────────── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow-sm);
+    animation: slideIn .35s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .panel-head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 16px;
+  }
+  .panel-num {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--indigo); font-weight: 600;
+    background: var(--indigo-50);
+    padding: 3px 9px; border-radius: 6px;
+    letter-spacing: 0.5px;
+  }
+  .panel-title {
+    font-size: 15px; font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  /* ── HERO: AUTO DETECT ─────────────────────────────────── */
+  .hero-auto {
+    background: var(--surface);
+    border: 1.5px solid var(--ink);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-auto::before {
+    content: ''; position: absolute;
+    inset: 0 0 auto 0; height: 4px;
+    background: linear-gradient(90deg, var(--indigo), var(--amber), var(--emerald));
+  }
+  .hero-auto-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: center;
+  }
+  .hero-auto h3 {
+    font-size: 18px; font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 6px;
+  }
+  .hero-auto p {
+    font-size: 13px; color: var(--ink-2);
+    line-height: 1.55;
+  }
+  .hero-auto .tag-row {
+    display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap;
+  }
+  .hero-tag {
+    font-family: var(--mono); font-size: 10px;
+    background: var(--surface-2);
+    color: var(--ink-2);
+    padding: 3px 8px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+  }
+  .hero-tag.on {
+    background: var(--emerald-50); color: var(--emerald);
+    border-color: var(--emerald-100);
+  }
+
+  /* ── DROPZONE ─────────────────────────────────────────── */
+  .dropzone {
+    border: 2px dashed var(--border-2);
+    border-radius: 12px;
+    padding: 32px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .25s;
+    position: relative;
+    background: var(--surface);
+  }
+  .dropzone:hover, .dropzone.drag {
+    border-color: var(--ink);
+    background: var(--surface-2);
+    transform: translateY(-1px);
+  }
+  .dropzone input {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%;
+  }
+  .dropzone-mini {
+    padding: 18px 20px;
+  }
+  .dz-icon {
+    font-size: 28px; margin-bottom: 6px; opacity: 0.7;
+  }
+  .dz-title {
+    font-size: 14px; font-weight: 600; margin-bottom: 3px;
+  }
+  .dz-sub {
+    font-size: 12px; color: var(--muted);
+  }
+
+  /* ── ALERTS ─────────────────────────────────────────────── */
+  .alert {
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    margin-bottom: 14px;
+    line-height: 1.55;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .alert-icon {
+    flex-shrink: 0;
+    width: 18px; height: 18px;
+    border-radius: 5px;
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 700;
+    margin-top: 1px;
+  }
+  .alert-info     { background: var(--indigo-50);  color: var(--indigo-700); border: 1px solid var(--indigo-100); }
+  .alert-info .alert-icon  { background: var(--indigo); color: white; }
+  .alert-success  { background: var(--emerald-50); color: var(--emerald); border: 1px solid var(--emerald-100); }
+  .alert-success .alert-icon { background: var(--emerald); color: white; }
+  .alert-warn     { background: var(--amber-50);   color: var(--amber);  border: 1px solid var(--amber-100); }
+  .alert-warn .alert-icon  { background: var(--amber); color: white; }
+  .alert-danger   { background: var(--rose-50);    color: var(--rose);   border: 1px solid var(--rose-100); }
+  .alert-danger .alert-icon { background: var(--rose); color: white; }
+
+  /* ── CODE BLOCKS ────────────────────────────────────────── */
+  .code-block {
+    background: #18181b;
+    color: #e4e4e7;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-family: var(--mono); font-size: 12px;
+    line-height: 1.7;
+    margin-bottom: 12px;
+    white-space: pre-wrap; word-break: break-all;
+    position: relative;
+  }
+  .code-block .lang-tag {
+    position: absolute; top: 10px; right: 12px;
+    font-size: 9px;
+    background: rgba(255,255,255,0.06);
+    color: #a1a1aa;
+    padding: 2px 7px; border-radius: 4px;
+    letter-spacing: 0.5px;
+  }
+  .code-inline {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 1px 6px; border-radius: 5px;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--indigo);
+  }
+
+  /* ── BUTTONS ────────────────────────────────────────────── */
+  .btn {
+    border: none;
+    padding: 10px 18px;
+    border-radius: 9px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: var(--sans);
+    font-weight: 600;
+    transition: all .15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    letter-spacing: -0.005em;
+  }
+  .btn-primary {
+    background: var(--ink);
+    color: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-primary:hover {
+    background: #000;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+  .btn-primary:disabled {
+    background: var(--faded); cursor: not-allowed; transform: none;
+  }
+  .btn-accent {
+    background: var(--indigo);
+    color: white;
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-accent:hover {
+    background: var(--indigo-700);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(67,56,202,0.25);
+  }
+  .btn-sec {
+    background: var(--surface);
+    color: var(--ink-2);
+    border: 1px solid var(--border-2);
+  }
+  .btn-sec:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+  .btn-copy {
+    background: var(--ink);
+    color: var(--surface);
+    border: none;
+    padding: 6px 14px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: var(--mono);
+    font-weight: 500;
+    transition: all .15s;
+    letter-spacing: 0.5px;
+  }
+  .btn-copy:hover { background: #000; }
+  .btn-copy.copied {
+    background: var(--emerald); color: white;
+  }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-lg { padding: 13px 22px; font-size: 14px; }
+  .btn-block { width: 100%; justify-content: center; }
+
+  .actions {
+    display: flex; gap: 10px; align-items: center;
+    margin-top: 18px;
+    flex-wrap: wrap;
+  }
+
+  /* ── FORMS ──────────────────────────────────────────────── */
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-2);
+    margin-bottom: 6px;
+    letter-spacing: 0.01em;
+  }
+  .field input, .field select, .field textarea {
+    background: var(--surface);
+    border: 1px solid var(--border-2);
+    border-radius: 8px;
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    width: 100%;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    border-color: var(--ink);
+    box-shadow: 0 0 0 3px rgba(20,20,20,0.05);
+  }
+  .field .hint {
+    font-size: 11px; color: var(--muted); margin-top: 5px;
+    font-family: var(--sans);
+  }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 640px) {
+    .grid4 { grid-template-columns: 1fr 1fr; }
+  }
+  textarea {
+    font-family: var(--mono); font-size: 12px;
+    padding: 10px 12px;
+    resize: vertical;
+    line-height: 1.7;
+    min-height: 120px;
+  }
+
+  /* ── MAT MAPPING ROWS ───────────────────────────────────── */
+  .mat-row {
+    display: grid;
+    grid-template-columns: 32px 1fr 80px;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    transition: border-color .15s;
+  }
+  .mat-row:hover { border-color: var(--border-2); }
+  .mat-idx {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--muted); text-align: center;
+    font-weight: 500;
+  }
+  .mat-name {
+    font-size: 13px; color: var(--ink);
+    font-weight: 500;
+  }
+  .mat-col {
+    background: var(--surface-2);
+    border: 1px solid var(--border-2);
+    border-radius: 6px;
+    color: var(--indigo);
+    font-family: var(--mono); font-size: 12px;
+    padding: 5px 8px;
+    text-align: center;
+    width: 100%;
+    outline: none;
+    font-weight: 600;
+    transition: border-color .15s;
+  }
+  .mat-col:focus { border-color: var(--ink); }
+
+  /* ── PREVIEW TABLE ──────────────────────────────────────── */
+  .preview-wrap {
+    overflow: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    margin-bottom: 14px;
+    max-height: 320px;
+    background: var(--surface);
+  }
+  table {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+  }
+  thead th {
+    background: var(--surface-2);
+    color: var(--ink-2);
+    font-family: var(--mono);
+    font-weight: 600;
+    padding: 9px 11px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-2);
+    white-space: nowrap;
+    position: sticky; top: 0;
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:nth-child(even) { background: var(--surface-2); }
+  tbody tr:hover { background: var(--indigo-50); }
+  tbody td { padding: 8px 11px; }
+  td.nota {
+    font-family: var(--mono);
+    color: var(--indigo);
+    text-align: center;
+    font-weight: 600;
+  }
+  td.nota.empty { color: var(--faded); font-weight: 400; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-size: 10px;
+    font-family: var(--mono);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .badge-ok {
+    background: var(--emerald-50);
+    color: var(--emerald);
+    border: 1px solid var(--emerald-100);
+  }
+  .badge-warn {
+    background: var(--amber-50);
+    color: var(--amber);
+    border: 1px solid var(--amber-100);
+  }
+  .badge-err {
+    background: var(--rose-50);
+    color: var(--rose);
+    border: 1px solid var(--rose-100);
+  }
+
+  /* ── SCRIPT BOX ─────────────────────────────────────────── */
+  .script-box {
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow-md);
+  }
+  .script-head {
+    background: #27272a;
+    padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid #3f3f46;
+  }
+  .script-head .filename {
+    font-family: var(--mono); font-size: 12px; color: #a1a1aa;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .script-head .filename::before {
+    content: ''; width: 8px; height: 8px;
+    background: var(--emerald);
+    border-radius: 50%;
+  }
+  .script-body {
+    padding: 18px 18px;
+    font-family: var(--mono); font-size: 11.5px;
+    color: #e4e4e7;
+    white-space: pre;
+    overflow-x: auto;
+    line-height: 1.65;
+    max-height: 380px;
+    overflow-y: auto;
+  }
+  /* Pequeño syntax highlighting */
+  .script-body .kw { color: #f472b6; }
+  .script-body .str { color: #86efac; }
+  .script-body .num { color: #fbbf24; }
+  .script-body .com { color: #6b7280; font-style: italic; }
+
+  /* ── STEP-USE LIST ──────────────────────────────────────── */
+  .steps-use {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .step-use {
+    display: flex; gap: 14px; align-items: flex-start;
+  }
+  .step-use-num {
+    min-width: 24px; height: 24px;
+    border-radius: 7px;
+    background: var(--ink);
+    color: var(--surface);
+    display: grid; place-items: center;
+    font-family: var(--mono); font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .step-use p {
+    font-size: 13px; color: var(--ink-2);
+    line-height: 1.6;
+  }
+
+  hr.sep {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 18px 0;
+  }
+  .hidden { display: none !important; }
+
+  /* ── DELAY ─────────────────────────────────────────────── */
+  .delay-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 8px 0;
+  }
+  .delay-row > span:first-child {
+    font-size: 13px; color: var(--ink-2);
+    flex: 0 0 auto; min-width: 170px;
+  }
+  .delay-row input[type=range] {
+    flex: 1;
+    height: 4px;
+    accent-color: var(--ink);
+    cursor: pointer;
+    -webkit-appearance: none;
+    background: var(--border);
+    border-radius: 100px;
+    outline: none;
+  }
+  .delay-row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--ink);
+    cursor: pointer;
+    border: 2px solid var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .delay-row input[type=range]::-moz-range-thumb {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--ink);
+    cursor: pointer;
+    border: 2px solid var(--surface);
+  }
+  .delay-val {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--ink);
+    min-width: 54px;
+    text-align: right;
+    font-weight: 600;
+    background: var(--surface-2);
+    padding: 3px 8px;
+    border-radius: 5px;
+  }
+
+  /* ── DETECTED INFO BOX ─────────────────────────────────── */
+  .detected-box {
+    background: var(--emerald-50);
+    border: 1px solid var(--emerald-100);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+  .detected-title {
+    font-size: 12px; font-weight: 700;
+    color: var(--emerald);
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+    letter-spacing: 0.01em;
+  }
+  .detected-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    font-size: 12px;
+  }
+  @media (max-width: 640px) { .detected-grid { grid-template-columns: 1fr 1fr; } }
+  .detected-item {
+    background: var(--surface);
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--emerald-100);
+  }
+  .detected-item .k {
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .detected-item .v {
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  /* ── FOOTER ────────────────────────────────────────────── */
+  .footer {
+    text-align: center;
+    padding: 24px 0 0;
+    color: var(--faded);
+    font-size: 11px;
+    font-family: var(--mono);
+    letter-spacing: 0.05em;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">SIE</div>
+    <div class="brand-text">
+      <h1>Cargador automático de notas</h1>
+      <div class="tag">academico.sie.gob.bo</div>
+    </div>
+  </div>
+  <div class="topbar-end">
+    <span class="version-pill">v4 · MODERNO</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="intro">
+    <h2>Carga tus notas en minutos</h2>
+    <p>Sube tu Excel del <span class="hot">CENTRALIZADOR 1T</span> y este asistente generará el script que llenará el SIE automáticamente.</p>
+  </div>
+
+  <!-- PROGRESS STEPS -->
+  <div class="steps">
+    <div class="step active" id="st1"><div class="step-num"><span>1</span></div><div class="step-label">Subir Excel</div></div>
+    <div class="step" id="st2"><div class="step-num"><span>2</span></div><div class="step-label">Materias SIE</div></div>
+    <div class="step" id="st3"><div class="step-num"><span>3</span></div><div class="step-label">Verificar</div></div>
+    <div class="step" id="st4"><div class="step-num"><span>4</span></div><div class="step-label">Script final</div></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- PASO 1: SUBIR EXCEL (MODO AUTO o MANUAL)               -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="sec1">
+
+    <!-- HERO AUTO -->
+    <div class="hero-auto">
+      <div class="hero-auto-grid">
+        <div>
+          <h3>⚡ Modo automático</h3>
+          <p>Sube tu archivo Excel y el sistema detectará automáticamente la hoja <strong>CENTRALIZADOR 1T</strong>, sus materias, columnas y datos.</p>
+          <div class="tag-row">
+            <span class="hero-tag on">✓ Detecta materias</span>
+            <span class="hero-tag on">✓ Detecta columnas</span>
+            <span class="hero-tag on">✓ Lista estudiantes</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="dropzone" id="dropzone-auto">
+        <input type="file" id="file-auto" accept=".xlsx,.xls,.xlsm" onchange="handleFileAuto(this.files[0])">
+        <div class="dz-icon">📊</div>
+        <div class="dz-title">Arrastra tu Excel aquí o haz clic para subir</div>
+        <div class="dz-sub">.xlsx · .xls · .xlsm · se procesa local, no se envía a ningún servidor</div>
+      </div>
+      <div id="auto-feedback"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-num">ALT</span>
+        <span class="panel-title">¿Tu Excel no tiene la hoja CENTRALIZADOR 1T?</span>
+      </div>
+      <p style="font-size:13px;color:var(--ink-2);margin-bottom:14px;">Usa el modo manual: primero pegas las materias del SIE, luego configuras las columnas y subes el archivo.</p>
+      <div class="actions" style="margin-top:0;">
+        <button class="btn btn-sec" onclick="irPaso(2)">Modo manual →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- PASO 2: MATERIAS (MANUAL)                              -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="sec2" class="hidden">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-num">01</span>
+        <span class="panel-title">Detectar materias del sistema SIE</span>
+      </div>
+
+      <div class="alert alert-info">
+        <span class="alert-icon">i</span>
+        <div>Abre el SIE, haz clic en el botón rojo de cualquier estudiante para abrir su modal, luego pega este script en la consola del navegador (F12 → Console):</div>
+      </div>
+
+      <div class="code-block">
+        <span class="lang-tag">JS · CONSOLE</span>
+console.log(Array.from(document.querySelectorAll('table tbody tr')).map((tr,i) => i+': '+tr.cells[0]?.textContent.trim()).filter(s=>s&&s.length>4).join('\n'))</div>
+      <button class="btn-copy" id="btn-c1" onclick="copiar('console.log(Array.from(document.querySelectorAll(\'table tbody tr\')).map((tr,i) => i+\':\'+tr.cells[0]?.textContent.trim()).filter(s=>s&&s.length>4).join(\'\\n\'))', 'btn-c1')">📋 COPIAR SCRIPT</button>
+
+      <hr class="sep">
+
+      <div class="field">
+        <label>Pega aquí el resultado de la consola</label>
+        <textarea id="materias-raw" rows="7" placeholder="Ejemplo:
+6: COMUNICACIÓN Y LENGUAJES: LENGUA CASTELLANA Y ORIGINARIA
+7: LENGUA EXTRANJERA
+8: CIENCIAS SOCIALES
+...
+18: VALORES, ESPIRITUALIDAD Y RELIGIONES
+
+También puedes escribirlas una por línea sin números."></textarea>
+        <div class="hint">Desde donde empieza COMUNICACIÓN hasta la última materia</div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-sec" onclick="irPaso(1)">← Volver</button>
+        <button class="btn btn-primary" onclick="procesarMaterias()">Siguiente →</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-num">02</span>
+        <span class="panel-title">Configuración del Excel</span>
+      </div>
+      <div class="grid4">
+        <div class="field"><label>Col. Paterno</label><input type="text" id="col-pat" value="B" maxlength="2"></div>
+        <div class="field"><label>Col. Materno</label><input type="text" id="col-mat" value="C" maxlength="2"></div>
+        <div class="field"><label>Col. Nombres</label><input type="text" id="col-nom" value="D" maxlength="2"></div>
+        <div class="field"><label>Fila inicio</label><input type="number" id="fila-inicio" value="8" min="1"></div>
+      </div>
+      <hr class="sep">
+      <div class="panel-head" style="margin-bottom:10px;">
+        <span class="panel-num">→</span>
+        <span class="panel-title">Columna del Excel para cada materia</span>
+      </div>
+      <div class="alert alert-info" style="margin-bottom:14px;">
+        <span class="alert-icon">i</span>
+        <div>Indica la letra de la columna donde está cada materia. Deja en blanco si no aplica.</div>
+      </div>
+      <div id="mat-mapping"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-num">03</span>
+        <span class="panel-title">Sube tu archivo Excel</span>
+      </div>
+      <div class="dropzone dropzone-mini" id="dropzone-man">
+        <input type="file" id="file-man" accept=".xlsx,.xls,.xlsm" onchange="handleFileManual(this.files[0])">
+        <div class="dz-icon">📂</div>
+        <div class="dz-title">Arrastra tu Excel o haz clic</div>
+        <div class="dz-sub">.xlsx · .xls · .xlsm</div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-sec" onclick="irPaso(1)">← Volver al modo automático</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- PASO 3: VERIFICAR (después de auto-detect)             -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="sec3" class="hidden">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-num">02</span>
+        <span class="panel-title">Pegamos las materias del SIE</span>
+      </div>
+      <div class="alert alert-info">
+        <span class="alert-icon">i</span>
+        <div>Necesitamos confirmar que las materias que detectamos coinciden con las del sistema SIE. Pega aquí el resultado de la consola del SIE.</div>
+      </div>
+
+      <div class="code-block">
+        <span class="lang-tag">JS · CONSOLE</span>
+console.log(Array.from(document.querySelectorAll('table tbody tr')).map((tr,i) => i+': '+tr.cells[0]?.textContent.trim()).filter(s=>s&&s.length>4).join('\n'))</div>
+      <button class="btn-copy" id="btn-c2" onclick="copiar('console.log(Array.from(document.querySelectorAll(\'table tbody tr\')).map((tr,i) => i+\':\'+tr.cells[0]?.textContent.trim()).filter(s=>s&&s.length>4).join(\'\\n\'))', 'btn-c2')">📋 COPIAR SCRIPT</button>
+
+      <hr class="sep">
+
+      <div class="field">
+        <label>Materias del SIE (en el orden que aparecen)</label>
+        <textarea id="materias-sie" rows="7"></textarea>
+        <div class="hint">Pega aquí el resultado de la consola del SIE. Si dejas el campo vacío usaremos las materias del Excel.</div>
+      </div>
+
+      <div id="auto-mapping-box" class="hidden">
+        <hr class="sep">
+        <div class="panel-head" style="margin-bottom:10px;">
+          <span class="panel-num">→</span>
+          <span class="panel-title">Mapeo automático Excel ↔ SIE</span>
+        </div>
+        <div class="alert alert-success">
+          <span class="alert-icon">✓</span>
+          <div>Cada materia del SIE quedará vinculada a su columna del Excel.</div>
+        </div>
+        <div id="mat-mapping-auto"></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-sec" onclick="irPaso(1)">← Subir otro Excel</button>
+        <button class="btn btn-accent" onclick="generarScriptAuto()">Generar script →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- PASO 4: SCRIPT FINAL                                   -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div id="sec4" class="hidden">
+    <div class="alert alert-success" id="resumen-alert">
+      <span class="alert-icon">✓</span>
+      <div id="resumen-text"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-num">→</span>
+        <span class="panel-title">Velocidad del script</span>
+      </div>
+      <div class="alert alert-warn">
+        <span class="alert-icon">!</span>
+        <div>Si tu internet o el SIE va lento, aumenta el tiempo de espera. Si va rápido, puedes bajarlo.</div>
+      </div>
+      <div class="delay-row">
+        <span>Espera entre estudiantes</span>
+        <input type="range" id="delay-slider" min="1000" max="8000" step="500" value="3000" oninput="actualizarDelay()">
+        <span class="delay-val" id="delay-val">3.0 s</span>
+      </div>
+      <div class="delay-row">
+        <span>Espera tras guardar</span>
+        <input type="range" id="save-slider" min="500" max="5000" step="500" value="2000" oninput="actualizarDelay()">
+        <span class="delay-val" id="save-val">2.0 s</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-num">→</span>
+        <span class="panel-title">Cómo usarlo</span>
+      </div>
+      <div class="steps-use">
+        <div class="step-use"><div class="step-use-num">1</div><p>Abre el SIE y navega a la lista de estudiantes de tu curso.</p></div>
+        <div class="step-use"><div class="step-use-num">2</div><p>Abre la consola: <code class="code-inline">F12</code> → pestaña <code class="code-inline">Console</code>.</p></div>
+        <div class="step-use"><div class="step-use-num">3</div><p>Escribe <code class="code-inline">allow pasting</code> y presiona Enter (solo la primera vez).</p></div>
+        <div class="step-use"><div class="step-use-num">4</div><p>Copia el script de abajo con el botón y pégalo con <code class="code-inline">Ctrl+V</code> → Enter.</p></div>
+        <div class="step-use"><div class="step-use-num">5</div><p>El script abre cada estudiante, llena las notas y guarda automáticamente. No toques el mouse mientras trabaja.</p></div>
+        <div class="step-use"><div class="step-use-num">6</div><p>Al terminar verás un resumen con los estudiantes guardados correctamente.</p></div>
+      </div>
+    </div>
+
+    <div class="script-box">
+      <div class="script-head">
+        <span class="filename" id="script-filename">script_notas.js</span>
+        <button class="btn-copy" id="btn-final" onclick="copiarFinal()">📋 COPIAR SCRIPT COMPLETO</button>
+      </div>
+      <div class="script-body" id="script-final-body"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-num">→</span>
+        <span class="panel-title">Vista previa de datos</span>
+      </div>
+      <div class="preview-wrap">
+        <table id="preview-table"></table>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-sec" onclick="irPaso(1)">🔄 Empezar de nuevo</button>
+    </div>
+  </div>
+
+  <div class="footer">SIE LOADER · v4 · LOCAL · NO DATA LEAVES YOUR BROWSER</div>
+
+</div>
+
+<script>
+let materiasDetectadas = []; // Materias del SIE (orden = orden en SIE)
+let materiasExcel = [];       // Materias del Excel (orden = columnas E:Q)
+let materiasExcelCols = [];   // Índices de columna Excel para cada materia del Excel
+let datosEstudiantes = [];
+let scriptFinal = '';
+let modoAuto = false;
+let workbookCache = null;
+let configAuto = null;
+
+// ═══════════ NAV ═══════════════════════════════════════════
+function irPaso(n) {
+  [1,2,3,4].forEach(i => {
+    document.getElementById('sec'+i).classList.toggle('hidden', i !== n);
+    const st = document.getElementById('st'+i);
+    st.className = 'step' + (i === n ? ' active' : i < n ? ' done' : '');
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══════════ COPIAR ════════════════════════════════════════
+function copiar(texto, btnId) {
+  navigator.clipboard.writeText(texto).then(() => {
+    const b = document.getElementById(btnId);
+    const orig = b.textContent;
+    b.textContent = '✓ COPIADO';
+    b.classList.add('copied');
+    setTimeout(() => { b.textContent = orig; b.classList.remove('copied'); }, 2000);
+  });
+}
+function copiarFinal() {
+  actualizarScript();
+  copiar(scriptFinal, 'btn-final');
+}
+
+// ═══════════ UTILS ═════════════════════════════════════════
+function colToIdx(col) {
+  col = (col || '').toUpperCase().trim();
+  if (!col) return -1;
+  let n = 0;
+  for (let c of col) n = n * 26 + c.charCodeAt(0) - 64;
+  return n - 1;
+}
+function idxToCol(idx) {
+  if (idx < 0) return '';
+  let s = '';
+  idx++;
+  while (idx > 0) {
+    const r = (idx - 1) % 26;
+    s = String.fromCharCode(65 + r) + s;
+    idx = Math.floor((idx - 1) / 26);
+  }
+  return s;
+}
+function normalizar(s) {
+  return (s || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase().replace(/[^A-Z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+}
+function showAlertAuto(html, type='info') {
+  document.getElementById('auto-feedback').innerHTML =
+    `<div class="alert alert-${type}" style="margin-top:14px;margin-bottom:0;">
+       <span class="alert-icon">${type==='success'?'✓':type==='danger'?'!':'i'}</span>
+       <div>${html}</div>
+     </div>`;
+}
+
+// ═══════════ MODO AUTOMÁTICO ═══════════════════════════════
+function handleFileAuto(file) {
+  if (!file) return;
+  showAlertAuto('Procesando archivo...', 'info');
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      workbookCache = wb;
+      // Buscar hoja CENTRALIZADOR 1T (tolerante a variaciones)
+      let sheetName = wb.SheetNames.find(n =>
+        normalizar(n).includes('CENTRALIZADOR') && /1\s*T/i.test(n)
+      );
+      if (!sheetName) {
+        sheetName = wb.SheetNames.find(n => normalizar(n).includes('CENTRALIZADOR'));
+      }
+      if (!sheetName) {
+        showAlertAuto(
+          '<strong>No se encontró la hoja "CENTRALIZADOR 1T"</strong> en este archivo. ' +
+          'Puedes usar el modo manual abajo o subir otro Excel.',
+          'danger'
+        );
+        return;
+      }
+      procesarCentralizador(wb, sheetName);
+    } catch(err) {
+      showAlertAuto('<strong>Error al leer el archivo:</strong> ' + err.message, 'danger');
+    }
+  };
+  reader.onerror = () => showAlertAuto('Error al leer el archivo.', 'danger');
+  reader.readAsArrayBuffer(file);
+}
+
+function procesarCentralizador(wb, sheetName) {
+  const ws = wb.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+  // En el CENTRALIZADOR 1T conocido:
+  // - Fila 6 (índice 5) = nombres de materias en E..Q
+  // - Fila 7 (índice 6) = AP. PATERNO / AP. MATERNO / NOMBRES en B/C/D
+  // - Fila 8 (índice 7) = primer estudiante
+  // Sin embargo, ESCANEAMOS para ser tolerantes.
+
+  let filaMaterias = -1, filaSubcab = -1, filaDatos = -1;
+  let colPat = -1, colMat = -1, colNom = -1;
+  let colsMaterias = [];
+  const nombresMaterias = [];
+
+  // Buscar fila con AP. PATERNO, AP. MATERNO, NOMBRES
+  for (let r = 0; r < Math.min(rows.length, 15); r++) {
+    const row = rows[r] || [];
+    for (let c = 0; c < row.length; c++) {
+      const v = normalizar(row[c]);
+      if (v === 'AP PATERNO' || v === 'AP. PATERNO' || v === 'APELLIDO PATERNO' || v === 'PATERNO') {
+        filaSubcab = r;
+        colPat = c;
+      }
+      if (v === 'AP MATERNO' || v === 'AP. MATERNO' || v === 'APELLIDO MATERNO' || v === 'MATERNO') {
+        if (filaSubcab === r || filaSubcab === -1) {
+          filaSubcab = r; colMat = c;
+        }
+      }
+      if (v === 'NOMBRES' || v === 'NOMBRE') {
+        if (filaSubcab === r || filaSubcab === -1) {
+          filaSubcab = r; colNom = c;
+        }
+      }
+    }
+    if (colPat >= 0 && colMat >= 0 && colNom >= 0) break;
+  }
+
+  // Si no encontramos, asumir B/C/D (índices 1,2,3) y fila 7
+  if (colPat < 0) { colPat = 1; colMat = 2; colNom = 3; filaSubcab = 6; }
+
+  // La fila de materias suele ser la anterior a la subcabecera (índice filaSubcab - 1)
+  filaMaterias = filaSubcab - 1;
+  filaDatos = filaSubcab + 1;
+
+  // Extraer materias desde colNom+1 hasta encontrar el "promedio" o el fin
+  const rowM = rows[filaMaterias] || [];
+  const IGNORAR = ['PROMEDIO', 'TOTAL', 'OBSERVACION', 'OBSERVACIONES', 'CUADRO DE HONOR', 'NOMINA', 'N', 'CENTRALIZADOR'];
+  for (let c = colNom + 1; c < rowM.length; c++) {
+    const v = (rowM[c] || '').toString().trim();
+    const vn = normalizar(v);
+    if (!v) {
+      // Si la celda está vacía y la siguiente no, seguimos. Si vienen >=2 vacías, paramos.
+      const next = (rowM[c+1] || '').toString().trim();
+      if (!next) break;
+      continue;
+    }
+    if (IGNORAR.some(ig => vn.startsWith(ig))) break; // PROMEDIO marca el fin
+    nombresMaterias.push(v.toUpperCase().trim());
+    colsMaterias.push(c);
+  }
+
+  if (nombresMaterias.length === 0) {
+    showAlertAuto('No se encontraron materias en la hoja. Usa el modo manual.', 'danger');
+    return;
+  }
+
+  // Detectar fila de datos: primer fila con AP. PATERNO no vacío
+  let filaInicioReal = filaDatos;
+  for (let r = filaDatos; r < rows.length; r++) {
+    const v = (rows[r]?.[colPat] || '').toString().trim();
+    if (v && normalizar(v) !== 'AP PATERNO' && normalizar(v) !== 'PATERNO') {
+      filaInicioReal = r;
+      break;
+    }
+  }
+
+  // Leer los datos
+  const estudiantes = [];
+  for (let r = filaInicioReal; r < rows.length; r++) {
+    const row = rows[r] || [];
+    const pat = (row[colPat] || '').toString().trim().toUpperCase();
+    if (!pat) continue;
+    // Saltar filas que no sean estudiantes (ej. cuadros de honor pueden estar al lado)
+    const est = {
+      paterno: pat,
+      materno: (row[colMat] || '').toString().trim().toUpperCase(),
+      nombre:  (row[colNom] || '').toString().trim().toUpperCase(),
+      notas: {}
+    };
+    colsMaterias.forEach((ci, mi) => {
+      const v = row[ci];
+      if (v !== undefined && v !== '' && v !== null) {
+        const num = parseFloat(v);
+        if (!isNaN(num)) est.notas[mi] = Math.round(num);
+      }
+    });
+    estudiantes.push(est);
+  }
+
+  if (estudiantes.length === 0) {
+    showAlertAuto('La hoja se leyó pero no se encontraron estudiantes con datos.', 'danger');
+    return;
+  }
+
+  // Guardar config y mostrar resumen
+  configAuto = {
+    sheetName,
+    colPat, colMat, colNom,
+    filaInicio: filaInicioReal,
+    nombresMaterias,
+    colsMaterias
+  };
+  materiasExcel = nombresMaterias.slice();
+  materiasExcelCols = colsMaterias.slice();
+  datosEstudiantes = estudiantes;
+  modoAuto = true;
+
+  // Mostrar info detectada
+  const totalNotas = estudiantes.reduce((s, e) => s + Object.keys(e.notas).length, 0);
+  showAlertAuto(`
+    <strong>¡Detectamos todo automáticamente!</strong>
+    <div class="detected-grid" style="margin-top:10px;">
+      <div class="detected-item"><div class="k">Hoja</div><div class="v">${sheetName}</div></div>
+      <div class="detected-item"><div class="k">Estudiantes</div><div class="v">${estudiantes.length}</div></div>
+      <div class="detected-item"><div class="k">Materias</div><div class="v">${nombresMaterias.length}</div></div>
+      <div class="detected-item"><div class="k">Notas totales</div><div class="v">${totalNotas}</div></div>
+      <div class="detected-item"><div class="k">Fila inicio</div><div class="v">${filaInicioReal+1}</div></div>
+      <div class="detected-item"><div class="k">Cols. notas</div><div class="v">${idxToCol(colsMaterias[0])}…${idxToCol(colsMaterias[colsMaterias.length-1])}</div></div>
+    </div>
+    <div style="margin-top:14px;">
+      <button class="btn btn-accent btn-lg btn-block" onclick="irPasoVerificar()">Continuar →</button>
+    </div>
+  `, 'success');
+}
+
+function irPasoVerificar() {
+  // Preparar materias SIE = por defecto las del Excel
+  document.getElementById('materias-sie').value = materiasExcel.join('\n');
+  // Renderizar el mapeo
+  renderMapeoAuto();
+  irPaso(3);
+}
+
+function renderMapeoAuto() {
+  const sieRaw = document.getElementById('materias-sie').value.trim();
+  let materiasSIE = [];
+  if (sieRaw) {
+    materiasSIE = parseMateriasTexto(sieRaw);
+  }
+  if (materiasSIE.length === 0) materiasSIE = materiasExcel.slice();
+
+  // Para cada materia SIE, intentar matchear con una materia del Excel por nombre
+  const html = materiasSIE.map((m, i) => {
+    const match = matchearMateria(m, materiasExcel);
+    const colDefault = match >= 0 ? idxToCol(materiasExcelCols[match]) : '';
+    return `
+      <div class="mat-row">
+        <span class="mat-idx">${i}</span>
+        <span class="mat-name">${m}</span>
+        <input class="mat-col" id="auto-mcol-${i}" value="${colDefault}" placeholder="—" maxlength="2">
+      </div>`;
+  }).join('');
+  document.getElementById('mat-mapping-auto').innerHTML = html;
+  document.getElementById('auto-mapping-box').classList.remove('hidden');
+  materiasDetectadas = materiasSIE;
+}
+
+function matchearMateria(materiaSIE, materiasExcelList) {
+  const n = normalizar(materiaSIE);
+  // Match exacto
+  let idx = materiasExcelList.findIndex(m => normalizar(m) === n);
+  if (idx >= 0) return idx;
+  // Match por palabras clave
+  const KEYS = {
+    'COMUNICACION': 'COMUNICACION', 'LENGUA CASTELLANA': 'COMUNICACION',
+    'LENGUA EXTRANJERA': 'LENGUA EXTRANJERA', 'INGLES': 'LENGUA EXTRANJERA',
+    'CIENCIAS SOCIALES': 'CIENCIAS SOCIALES', 'SOCIALES': 'CIENCIAS SOCIALES',
+    'EDUCACION FISICA': 'EDUCACION FISICA', 'FISICA': 'EDUCACION FISICA',
+    'EDUCACION MUSICAL': 'EDUCACION MUSICAL', 'MUSICA': 'EDUCACION MUSICAL', 'MUSICAL': 'EDUCACION MUSICAL',
+    'ARTES PLASTICAS': 'ARTES PLASTICAS', 'PLASTICAS': 'ARTES PLASTICAS', 'ARTE': 'ARTES PLASTICAS',
+    'MATEMATICA': 'MATEMATICA',
+    'TECNICA TECNOLOGICA': 'TECNICA TECNOLOGICA', 'TECNOLOGIA': 'TECNICA TECNOLOGICA',
+    'BIOLOGIA': 'BIOLOGIA',
+    'QUIMICA': 'QUIMICA',
+    'PSICOLOGIA': 'PSICOLOGIA',
+    'RELIGION': 'RELIGION', 'VALORES': 'RELIGION', 'ESPIRITUALIDAD': 'RELIGION',
+  };
+  let canon = null;
+  for (const k in KEYS) { if (n.includes(k)) { canon = KEYS[k]; break; } }
+  if (canon) {
+    idx = materiasExcelList.findIndex(m => {
+      const mn = normalizar(m);
+      for (const k in KEYS) {
+        if (KEYS[k] === canon && mn.includes(k)) return true;
+      }
+      return false;
+    });
+    if (idx >= 0) return idx;
+  }
+  // Match por substring largo
+  idx = materiasExcelList.findIndex(m => {
+    const mn = normalizar(m);
+    return mn.length > 4 && (n.includes(mn) || mn.includes(n));
+  });
+  return idx;
+}
+
+function parseMateriasTexto(raw) {
+  const IGNORAR = ['NIVEL','GRADO','TURNO','PARALELO','CODIGO RUDE','ESTUDIANTE','ESTADO','ÁREA','AREA','TRIMESTRE','ASIGNATURA'];
+  const out = [];
+  raw.split('\n').forEach(linea => {
+    linea = linea.trim();
+    if (!linea) return;
+    const sin = linea.replace(/^\d+[\.\:\-\)]\s*/, '').trim().toUpperCase();
+    if (sin.length < 4) return;
+    if (IGNORAR.some(ig => sin.startsWith(ig))) return;
+    out.push(sin);
+  });
+  return out;
+}
+
+document.addEventListener('input', e => {
+  if (e.target.id === 'materias-sie') {
+    renderMapeoAuto();
+  }
+});
+
+function generarScriptAuto() {
+  // Leer mapeo final del DOM
+  const finalNotas = datosEstudiantes.map(e => ({
+    paterno: e.paterno, materno: e.materno, nombre: e.nombre, notas: {}
+  }));
+  // Para cada materia SIE (índice i), tomar la columna del Excel ingresada
+  // y mapear su valor desde datosEstudiantes a notas[i]
+  materiasDetectadas.forEach((m, i) => {
+    const colLetra = document.getElementById(`auto-mcol-${i}`)?.value || '';
+    const colIdx = colToIdx(colLetra);
+    if (colIdx < 0) return;
+    // Buscar a qué materia del Excel corresponde esa columna
+    const excelMatIdx = materiasExcelCols.indexOf(colIdx);
+    if (excelMatIdx < 0) return;
+    // Pasar los datos
+    datosEstudiantes.forEach((e, ei) => {
+      if (e.notas[excelMatIdx] !== undefined) {
+        finalNotas[ei].notas[i] = e.notas[excelMatIdx];
+      }
+    });
+  });
+  datosEstudiantes = finalNotas;
+  generarVista();
+  actualizarScript();
+  irPaso(4);
+}
+
+// ═══════════ MODO MANUAL ═══════════════════════════════════
+function procesarMaterias() {
+  const raw = document.getElementById('materias-raw').value.trim();
+  if (!raw) { alert('Pega primero el resultado de la consola.'); return; }
+  materiasDetectadas = parseMateriasTexto(raw);
+  if (materiasDetectadas.length === 0) {
+    // Intentar JSON
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        parsed.forEach(item => {
+          const n = (item.nombre || item.name || item || '').toString().trim().toUpperCase();
+          if (n.length > 3) materiasDetectadas.push(n);
+        });
+      }
+    } catch(e) {}
+  }
+  if (materiasDetectadas.length === 0) {
+    alert('No se encontraron materias. Escríbelas una por línea manualmente.');
+    return;
+  }
+  renderMapeoManual();
+  // Scroll al mapping
+  document.getElementById('mat-mapping').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function renderMapeoManual() {
+  const cols = 'EFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  document.getElementById('mat-mapping').innerHTML = materiasDetectadas.map((m, i) => `
+    <div class="mat-row">
+      <span class="mat-idx">${i}</span>
+      <span class="mat-name">${m}</span>
+      <input class="mat-col" id="mcol-${i}" value="${cols[i] || ''}" placeholder="—" maxlength="2">
+    </div>
+  `).join('');
+}
+
+function handleFileManual(file) {
+  if (!file) return;
+  if (materiasDetectadas.length === 0) {
+    alert('Primero detecta las materias del SIE (pega el resultado de la consola arriba).');
+    return;
+  }
+  const cfg = {
+    pat: colToIdx(document.getElementById('col-pat').value),
+    mat: colToIdx(document.getElementById('col-mat').value),
+    nom: colToIdx(document.getElementById('col-nom').value),
+    filaInicio: parseInt(document.getElementById('fila-inicio').value) - 1,
+    matCols: materiasDetectadas.map((_, i) => colToIdx(document.getElementById(`mcol-${i}`)?.value || ''))
+  };
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(e.target.result, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    datosEstudiantes = [];
+    for (let r = cfg.filaInicio; r < rows.length; r++) {
+      const row = rows[r];
+      if (!row || !row[cfg.pat]) continue;
+      const pat = String(row[cfg.pat] || '').trim().toUpperCase();
+      if (!pat || ['AP. PATERNO','PATERNO','N'].includes(pat)) continue;
+      const est = {
+        paterno: pat,
+        materno: String(row[cfg.mat] || '').trim().toUpperCase(),
+        nombre: String(row[cfg.nom] || '').trim().toUpperCase(),
+        notas: {}
+      };
+      cfg.matCols.forEach((ci, mi) => {
+        if (ci >= 0 && row[ci] !== undefined && row[ci] !== '') {
+          const v = parseFloat(row[ci]);
+          if (!isNaN(v)) est.notas[mi] = Math.round(v);
+        }
+      });
+      datosEstudiantes.push(est);
+    }
+    if (datosEstudiantes.length === 0) {
+      alert('No se encontraron datos. Verifica la configuración de columnas y fila de inicio.');
+      return;
+    }
+    generarVista();
+    actualizarScript();
+    irPaso(4);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ═══════════ DELAY ═════════════════════════════════════════
+function actualizarDelay() {
+  const d = parseInt(document.getElementById('delay-slider').value);
+  const s = parseInt(document.getElementById('save-slider').value);
+  document.getElementById('delay-val').textContent = (d/1000).toFixed(1) + ' s';
+  document.getElementById('save-val').textContent = (s/1000).toFixed(1) + ' s';
+  if (datosEstudiantes.length > 0) actualizarScript();
+}
+
+// ═══════════ GENERAR SCRIPT ════════════════════════════════
+function actualizarScript() {
+  const delay = parseInt(document.getElementById('delay-slider').value);
+  const saveDelay = parseInt(document.getElementById('save-slider').value);
+  const total = datosEstudiantes.length;
+  const totalNotas = datosEstudiantes.reduce((s,e) => s + Object.keys(e.notas).length, 0);
+  const dataStr = JSON.stringify(datosEstudiantes.map(e => ({
+    paterno: e.paterno, materno: e.materno, nombre: e.nombre, notas: e.notas
+  })), null, 2);
+
+  scriptFinal = `// ================================================
+// SCRIPT SIE - CARGA AUTOMÁTICA COMPLETA
+// ${total} estudiantes · ${totalNotas} notas · ${materiasDetectadas.length} materias
+// Generado: ${new Date().toLocaleString('es-BO')}
+// ================================================
+// INSTRUCCIONES:
+// 1. Abre el SIE y ve a la lista de estudiantes
+// 2. NO abras ningún modal, déjalo en la lista
+// 3. Pega este script en la consola y presiona Enter
+// 4. No toques el mouse mientras trabaja
+// ================================================
+
+(async function() {
+  const DELAY_MODAL   = ${delay};   // espera para que cargue el modal
+  const DELAY_GUARDAR = ${saveDelay}; // espera tras guardar
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  const estudiantes = ${dataStr};
+
+  let ok = 0, err = 0, saltados = 0;
+
+  console.log('🚀 Iniciando carga de ' + estudiantes.length + ' estudiantes...');
+
+  for (let i = 0; i < estudiantes.length; i++) {
+    const est = estudiantes[i];
+    console.log('\\n[' + (i+1) + '/' + estudiantes.length + '] Procesando: ' + est.paterno + ' ' + est.nombre);
+
+    const filas = document.querySelectorAll('table tbody tr');
+    let botonModal = null;
+
+    for (const fila of filas) {
+      const celdas = Array.from(fila.querySelectorAll('td'));
+      const textos = celdas.map(c => c.textContent.trim().toUpperCase());
+      if (textos.includes(est.paterno)) {
+        botonModal = fila.querySelector('button.btn-danger') ||
+                     fila.querySelector('button.btn-circle.btn-danger') ||
+                     Array.from(fila.querySelectorAll('button')).find(b => b.classList.contains('btn-danger'));
+        break;
+      }
+    }
+
+    if (!botonModal) {
+      console.warn('⚠️ No encontrado en tabla: ' + est.paterno);
+      const filaPos = filas[i];
+      if (filaPos) {
+        botonModal = filaPos.querySelector('button.btn-danger') ||
+                     Array.from(filaPos.querySelectorAll('button')).find(b => b.classList.contains('btn-danger'));
+      }
+      if (!botonModal) { err++; saltados++; continue; }
+    }
+
+    botonModal.click();
+    await sleep(DELAY_MODAL);
+
+    const modal = document.querySelector('.modal.in, .modal[style*="display: block"], .bs-example-modal-table');
+    const inputs = document.querySelectorAll('#modal-body input.nota');
+
+    if (!inputs || inputs.length === 0) {
+      console.warn('⚠️ Modal no cargó para: ' + est.paterno + '. Esperando más...');
+      await sleep(2000);
+      const inputsRetry = document.querySelectorAll('#modal-body input.nota');
+      if (!inputsRetry || inputsRetry.length === 0) {
+        console.error('❌ Sin campos de nota: ' + est.paterno);
+        err++;
+        const btnCerrar = document.querySelector('.modal .btn-default, .modal [data-dismiss="modal"]');
+        if (btnCerrar) btnCerrar.click();
+        await sleep(500);
+        continue;
+      }
+    }
+
+    const inputsActuales = document.querySelectorAll('#modal-body input.nota');
+    let notasCargadas = 0;
+
+    inputsActuales.forEach((inp, idx) => {
+      if (est.notas[idx] !== undefined) {
+        inp.value = '';
+        inp.value = est.notas[idx];
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
+        inp.dispatchEvent(new Event('change', { bubbles: true }));
+        inp.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+        notasCargadas++;
+      }
+    });
+
+    console.log('  📝 ' + notasCargadas + ' notas llenadas');
+    await sleep(300);
+
+    const btnGuardar = document.querySelector('#modal-body ~ .modal-footer button.btn-primary') ||
+                       document.querySelector('.modal-footer button.btn-primary') ||
+                       Array.from(document.querySelectorAll('.modal button')).find(b =>
+                         b.textContent.toLowerCase().includes('guardar') ||
+                         b.textContent.toLowerCase().includes('grabar') ||
+                         b.textContent.toLowerCase().includes('save'));
+
+    if (btnGuardar) {
+      btnGuardar.click();
+      await sleep(DELAY_GUARDAR);
+      console.log('  ✅ Guardado: ' + est.paterno + ' ' + est.nombre);
+      ok++;
+    } else {
+      console.error('  ❌ Botón guardar no encontrado: ' + est.paterno);
+      err++;
+      const btnCerrar = document.querySelector('.modal [data-dismiss="modal"], .modal .btn-default');
+      if (btnCerrar) btnCerrar.click();
+      await sleep(500);
+    }
+
+    await sleep(400);
+  }
+
+  console.log('\\n╔══════════════════════════════╗');
+  console.log('║     CARGA COMPLETADA         ║');
+  console.log('╠══════════════════════════════╣');
+  console.log('║  ✅ Guardados: ' + String(ok).padEnd(14) + '║');
+  console.log('║  ❌ Con error: ' + String(err).padEnd(14) + '║');
+  console.log('║  📋 Total:    ' + String(estudiantes.length).padEnd(14) + '║');
+  console.log('╚══════════════════════════════╝');
+  alert('Carga completada\\n\\n✅ Guardados correctamente: ' + ok + '\\n❌ Con error: ' + err + '\\n\\nRevisa la consola para ver detalles.');
+})();`;
+
+  document.getElementById('script-final-body').textContent = scriptFinal;
+  document.getElementById('script-filename').textContent =
+    `script_notas_${datosEstudiantes.length}est_${new Date().toLocaleDateString('es-BO').replace(/\//g,'-')}.js`;
+}
+
+// ═══════════ VISTA PREVIA ══════════════════════════════════
+function generarVista() {
+  const total = datosEstudiantes.length;
+  const totalNotas = datosEstudiantes.reduce((s,e) => s + Object.keys(e.notas).length, 0);
+  document.getElementById('resumen-text').innerHTML =
+    `<strong>${total} estudiantes</strong> · ${totalNotas} notas totales · ${materiasDetectadas.length} materias listas para cargar`;
+
+  const headers = ['#','Paterno','Materno','Nombre',...materiasDetectadas.map((_,i)=>'M'+i),'Estado'];
+  const table = document.getElementById('preview-table');
+  table.innerHTML = `
+    <thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>
+      ${datosEstudiantes.map((e,i) => `<tr>
+        <td>${i+1}</td>
+        <td style="font-weight:600">${e.paterno}</td>
+        <td>${e.materno||'—'}</td>
+        <td>${e.nombre}</td>
+        ${materiasDetectadas.map((_,mi) => `<td class="nota ${e.notas[mi]===undefined?'empty':''}">${e.notas[mi]!==undefined?e.notas[mi]:'—'}</td>`).join('')}
+        <td><span class="badge ${Object.keys(e.notas).length>0?'badge-ok':'badge-warn'}">${Object.keys(e.notas).length}</span></td>
+      </tr>`).join('')}
+    </tbody>`;
+}
+
+// ═══════════ DRAG & DROP ═══════════════════════════════════
+['dropzone-auto', 'dropzone-man'].forEach(id => {
+  const dz = document.getElementById(id);
+  if (!dz) return;
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('drag');
+    const handler = id === 'dropzone-auto' ? handleFileAuto : handleFileManual;
+    handler(e.dataTransfer.files[0]);
+  });
+});
+</script>
+</body>
+</html>

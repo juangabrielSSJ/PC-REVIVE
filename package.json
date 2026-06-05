@@ -1,0 +1,34 @@
+{
+  "name": "pdc-bolivia-2026",
+  "version": "1.0.0",
+  "description": "Generador PDC Bolivia 2026 Pro",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder build --win --x64"
+  },
+  "build": {
+    "appId": "com.pdc.bolivia2026",
+    "productName": "PDC Bolivia 2026",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "PDC_Bolivia_2026_Pro.html",
+      "logo.png"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    }
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0"
+  }
+}

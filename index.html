@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PC REVIVE – Herramientas Educativas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&family=Sora:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:        #f0f6ff;
+      --surface:   #ffffff;
+      --primary:   #1a6fd4;
+      --primary-light: #e8f1fc;
+      --accent:    #0ea5e9;
+      --accent2:   #22d3a5;
+      --accent3:   #f59e0b;
+      --text:      #1e293b;
+      --muted:     #64748b;
+      --border:    #dbeafe;
+      --shadow:    0 8px 32px rgba(26,111,212,0.10);
+      --radius:    18px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── decorative blobs ── */
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.18;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob-1 { width: 520px; height: 520px; background: #1a6fd4; top: -160px; left: -160px; }
+    .blob-2 { width: 400px; height: 400px; background: #22d3a5; bottom: -120px; right: -100px; }
+    .blob-3 { width: 260px; height: 260px; background: #f59e0b; top: 50%;  left: 60%; }
+
+    /* ── header ── */
+    header {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 52px 24px 36px;
+      text-align: center;
+    }
+
+    .logo-wrap {
+      width: 130px;
+      height: 130px;
+      border-radius: 28px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      margin-bottom: 20px;
+      border: 3px solid var(--border);
+      animation: pop .6s cubic-bezier(.34,1.56,.64,1) both;
+    }
+
+    /* ── REEMPLAZA esta imagen con tu logo ── */
+    .logo-wrap img {
+      width: 90px;
+      height: 90px;
+      object-fit: contain;
+    }
+
+    /* placeholder mientras no hay imagen */
+    .logo-placeholder {
+      font-family: 'Sora', sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      color: var(--primary);
+      letter-spacing: -1px;
+    }
+
+    .company-name {
+      font-family: 'Sora', sans-serif;
+      font-size: clamp(1.8rem, 5vw, 2.6rem);
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: -1px;
+      animation: slideUp .5s .1s both;
+    }
+
+    .tagline {
+      margin-top: 8px;
+      font-size: 1rem;
+      color: var(--muted);
+      max-width: 480px;
+      line-height: 1.6;
+      animation: slideUp .5s .2s both;
+    }
+
+    .phone-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 14px;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: .95rem;
+      padding: 6px 18px;
+      border-radius: 999px;
+      border: 1.5px solid var(--border);
+      animation: slideUp .5s .3s both;
+    }
+    .phone-badge svg { width:16px; height:16px; }
+
+    /* ── divider ── */
+    .divider {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      margin: 8px 0 32px;
+      font-family: 'Sora', sans-serif;
+      font-size: .8rem;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      animation: slideUp .5s .35s both;
+    }
+
+    /* ── cards ── */
+    .cards {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 24px;
+      padding: 0 24px 60px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      width: 280px;
+      padding: 36px 28px 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      box-shadow: var(--shadow);
+      text-decoration: none;
+      color: var(--text);
+      transition: transform .25s, box-shadow .25s, border-color .25s;
+      animation: popCard .55s both;
+    }
+    .card:nth-child(1) { animation-delay: .4s; }
+    .card:nth-child(2) { animation-delay: .52s; }
+    .card:nth-child(3) { animation-delay: .64s; }
+
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 16px 48px rgba(26,111,212,0.16);
+      border-color: var(--primary);
+    }
+
+    .card-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+    .icon-blue   { background: #e8f1fc; }
+    .icon-green  { background: #d1faf0; }
+    .icon-amber  { background: #fef3c7; }
+
+    .card-title {
+      font-family: 'Sora', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .card-desc {
+      font-size: .9rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .card-btn {
+      margin-top: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 700;
+      font-size: .88rem;
+      padding: 9px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: background .2s;
+    }
+    .card:nth-child(2) .card-btn { background: var(--accent2); }
+    .card:nth-child(3) .card-btn { background: var(--accent3); }
+    .card:hover .card-btn { filter: brightness(1.08); }
+
+    /* ── services strip ── */
+    .services {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      padding: 0 24px 60px;
+      animation: slideUp .5s .7s both;
+    }
+    .service-chip {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 999px;
+      padding: 7px 18px;
+      font-size: .83rem;
+      font-weight: 600;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ── WhatsApp button ── */
+    .whatsapp-btn {
+      position: relative;
+      z-index: 1;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #25d366;
+      color: #fff;
+      font-family: 'Sora', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 14px 30px;
+      border-radius: 999px;
+      text-decoration: none;
+      box-shadow: 0 6px 24px rgba(37,211,102,0.35);
+      transition: transform .2s, box-shadow .2s, background .2s;
+      cursor: pointer;
+      border: none;
+      animation: slideUp .5s .75s both;
+    }
+    .whatsapp-btn:hover {
+      background: #1ebe5d;
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(37,211,102,0.45);
+    }
+    .whatsapp-btn:active { transform: scale(.97); }
+    .whatsapp-btn svg { width: 24px; height: 24px; flex-shrink: 0; }
+
+    .whatsapp-wrap {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: center;
+      padding: 0 24px 48px;
+    }
+
+    /* ── footer ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 20px;
+      font-size: .82rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── animations ── */
+    @keyframes pop {
+      from { opacity:0; transform: scale(.7); }
+      to   { opacity:1; transform: scale(1); }
+    }
+    @keyframes popCard {
+      from { opacity:0; transform: translateY(28px) scale(.96); }
+      to   { opacity:1; transform: translateY(0) scale(1); }
+    }
+    @keyframes slideUp {
+      from { opacity:0; transform: translateY(18px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+
+
+
+    
+.info-docente {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 20px;
+    text-align: justify;
+    line-height: 1.8;
+}
+
+.info-docente h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.info-docente p {
+    margin-bottom: 15px;
+}
+
+
+
+
+  </style>
+</head>
+<body>
+
+  <!-- decoración de fondo -->
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+
+  <!-- ── ENCABEZADO ── -->
+  <header>
+    <div class="logo-wrap">
+      <!--
+        INSTRUCCIÓN: reemplaza la línea de abajo con tu imagen logo.
+        Ejemplo: <img src="logo.png" alt="Logo PC REVIVE" />
+      -->
+      <span class="logo-placeholder"><br/></span>
+      <img src="logo.png" alt="" width="500" height="500"> 
+    </div>
+
+    <h1 class="company-name">PC REVIVE</h1>
+
+    <p class="tagline">
+      Reparación de computadoras · Mantenimiento · Instalación de sistemas operativos
+      (Linux, Windows, Android) · Software y programas
+    
+
+<div class="info-docente">
+    <h3>Bienvenido a Nuestra Plataforma Educativa</h3>
+
+    <p>
+        Bienvenido a nuestra plataforma educativa, un espacio diseñado para apoyar el trabajo docente mediante herramientas que facilitan la planificación, evaluación y organización pedagógica. Aquí encontrarás recursos como la generación automática de Planes de Desarrollo Curricular (PDC), rúbricas de evaluación, listas de cotejo, instrumentos de seguimiento, documentos pedagógicos y otras utilidades orientadas a optimizar el tiempo del profesor. Si tienes consultas, sugerencias o requieres asistencia personalizada, puedes comunicarte con nosotros de manera rápida y directa a través de WhatsApp, donde estaremos disponibles para brindarte apoyo y orientación en el uso de nuestros servicios.
+
+    </p>
+
+    
+</div>
+
+
+    <div class="phone-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.8 19.79 19.79 0 01.01 2.22 2 2 0 012 .04h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/>
+      </svg>
+      74412748
+    </div>
+  </header>
+
+  <div class="divider">— Herramientas educativas —</div>
+
+  <!-- ── TARJETAS DE NAVEGACIÓN ── -->
+  <div class="cards">
+
+    <a class="card" href="pdc.html">
+      <img src="pdc.png" width="220" height="220">
+      <div class="card-title">Generador de PDC</div>
+      <p class="card-desc">
+        Crea de forma automática tu Plan de Desarrollo Curricular con todos los datos necesarios con IA
+      </p>
+      <span class="card-btn">
+        Abrir PDC
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </span>
+    </a>
+
+    <a class="card" href="rubricas.html">
+      <img src="rubricas.jpg" width="220" height="220">
+      <div class="card-title">Rúbricas</div>
+      <p class="card-desc">
+        Diseña y genera rúbricas de evaluación detalladas para tus actividades y proyectos con IA
+      </p>
+      <span class="card-btn">
+        Abrir Rúbricas
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </span>
+    </a>
+
+    <a class="card" href="lista de cotejos.html">
+      <img src="lista.png" width="220" height="220">
+      <div class="card-title">Lista de Cotejos</div>
+      <p class="card-desc">
+        Genera listas de verificación para el seguimiento de criterios y competencias con IA
+      </p>
+      <span class="card-btn">
+        Abrir Cotejos
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </span>
+    </a>
+     <a class="card" href="notas.html">
+      <img src="notas.jpg" width="220" height="220">
+      <div class="card-title">Subir notas a SIE automatizado</div>
+      <p class="card-desc">
+        Genera un script que subira tus notas automaticamente a SIE
+      </p>
+      <span class="card-btn">
+        Abrir Subir notas
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </span>
+    </a>
+
+  </div>
+
+  <!-- ── SERVICIOS ── -->
+  <div class="services">
+    <div class="service-chip">🖥️ Reparación de PC</div>
+    <div class="service-chip">🔧 Mantenimiento</div>
+    <div class="service-chip">🐧 Linux</div>
+    <div class="service-chip">🪟 Windows</div>
+    <div class="service-chip">🤖 Android en PC</div>
+    <div class="service-chip">💿 Instalación de software</div>
+  </div>
+
+  <!-- ── BOTÓN WHATSAPP ── -->
+  <div class="whatsapp-wrap">
+    <a class="whatsapp-btn" id="waBtn" href="#" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      </svg>
+      Escribir por WhatsApp
+    </a>
+  </div>
+
+  <script>
+    // ── WhatsApp directo ──
+    const WA_NUMBER = '59174412748'; // código de Bolivia (591) + tu número
+    const WA_MESSAGE = encodeURIComponent(
+      '¡Hola PC REVIVE! Me comunico desde su página. ¿Podría darme más información sobre sus servicios?'
+    );
+    document.getElementById('waBtn').href =
+      `https://wa.me/${WA_NUMBER}?text=${WA_MESSAGE}`;
+  </script>
+
+  <!-- ── PIE ── -->
+  <footer>
+    © 2026 PC REVIVE · Todos los derechos reservados · Tel. 74412748
+  </footer>
+
+</body>
+</html>

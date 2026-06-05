@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Rúbricas de Evaluación – PC REVIVE</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#f0faf4;
+  --surface:#ffffff;
+  --green:#1a7a4a;
+  --green2:#25a865;
+  --green-light:#e4f5ec;
+  --green-mid:#b7e4cc;
+  --accent:#f59e0b;
+  --ser:#e74c3c;
+  --hacer:#2980b9;
+  --saber:#27ae60;
+  --text:#1a2e1e;
+  --muted:#5a7a63;
+  --border:#c8e6d4;
+  --shadow:0 8px 32px rgba(26,122,74,0.10);
+  --radius:16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── OVERLAY CONTRASEÑA ── */
+#lockScreen{
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(135deg,#0d3320 0%,#1a7a4a 50%,#0d3320 100%);
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:0;
+}
+.lock-card{
+  background:rgba(255,255,255,0.07);
+  border:1.5px solid rgba(255,255,255,0.18);
+  border-radius:24px;
+  padding:48px 40px;
+  width:min(420px,90vw);
+  backdrop-filter:blur(18px);
+  display:flex;flex-direction:column;gap:20px;
+  box-shadow:0 24px 64px rgba(0,0,0,0.4);
+}
+.lock-logo{
+  font-family:'DM Serif Display',serif;
+  font-size:2rem;color:#fff;text-align:center;
+  text-shadow:0 2px 12px rgba(0,0,0,0.3);
+}
+.lock-sub{font-size:.85rem;color:rgba(255,255,255,0.6);text-align:center;}
+.lock-label{font-size:.78rem;font-weight:700;color:rgba(255,255,255,0.7);letter-spacing:1.5px;text-transform:uppercase;}
+.lock-input{
+  width:100%;padding:13px 16px;
+  background:rgba(255,255,255,0.12);
+  border:1.5px solid rgba(255,255,255,0.25);
+  border-radius:10px;color:#fff;font-size:.95rem;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  outline:none;transition:border .2s;
+}
+.lock-input::placeholder{color:rgba(255,255,255,0.35);}
+.lock-input:focus{border-color:var(--green2);}
+.lock-btn{
+  width:100%;padding:14px;
+  background:var(--green2);border:none;border-radius:10px;
+  color:#fff;font-weight:800;font-size:1rem;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  cursor:pointer;transition:background .2s,transform .15s;
+}
+.lock-btn:hover{background:#1e9658;transform:translateY(-2px);}
+.lock-err{color:#ff6b6b;font-size:.85rem;text-align:center;min-height:20px;}
+
+/* ── MAIN APP ── */
+#app{display:none;}
+
+/* header */
+.top-bar{
+  background:linear-gradient(90deg,var(--green) 0%,var(--green2) 100%);
+  padding:18px 32px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 4px 18px rgba(26,122,74,0.18);
+}
+.top-bar-title{
+  font-family:'DM Serif Display',serif;
+  font-size:1.5rem;color:#fff;letter-spacing:-.5px;
+}
+.top-bar-sub{font-size:.78rem;color:rgba(255,255,255,.7);margin-top:2px;}
+.logout-btn{
+  background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);
+  color:#fff;padding:7px 18px;border-radius:999px;
+  font-size:.8rem;font-weight:700;cursor:pointer;
+  font-family:'Plus Jakarta Sans',sans-serif;transition:background .2s;
+}
+.logout-btn:hover{background:rgba(255,255,255,.25);}
+
+/* container */
+.container{max-width:1100px;margin:0 auto;padding:32px 20px 60px;}
+
+/* section card */
+.card{
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:var(--radius);padding:28px 32px;
+  box-shadow:var(--shadow);margin-bottom:24px;
+}
+.card-title{
+  font-family:'DM Serif Display',serif;
+  font-size:1.25rem;color:var(--green);
+  margin-bottom:20px;display:flex;align-items:center;gap:10px;
+}
+.card-title span{font-size:1.4rem;}
+
+/* grid inputs */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;}
+@media(max-width:640px){
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}
+}
+
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:.76rem;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.field input,.field select,.field textarea{
+  padding:11px 14px;border:1.5px solid var(--border);
+  border-radius:10px;font-size:.92rem;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  background:var(--bg);color:var(--text);outline:none;
+  transition:border .2s,box-shadow .2s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--green2);
+  box-shadow:0 0 0 3px rgba(37,168,101,.12);
+}
+.field textarea{resize:vertical;min-height:80px;}
+
+/* semanas toggle */
+.weeks-toggle{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px;}
+.week-opt{
+  flex:1;min-width:80px;padding:12px;text-align:center;
+  border:2px solid var(--border);border-radius:12px;
+  cursor:pointer;font-weight:700;font-size:.9rem;
+  color:var(--muted);background:var(--bg);
+  transition:all .2s;user-select:none;
+}
+.week-opt.active{
+  border-color:var(--green2);background:var(--green-light);
+  color:var(--green);box-shadow:0 2px 10px rgba(37,168,101,.15);
+}
+
+/* semana blocks */
+.semana-block{
+  border:1.5px solid var(--green-mid);border-radius:12px;
+  padding:20px;margin-bottom:16px;background:var(--green-light);
+}
+.semana-block h4{
+  font-family:'DM Serif Display',serif;
+  color:var(--green);font-size:1.05rem;margin-bottom:14px;
+}
+
+/* dimensiones pills */
+.dims{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.dim-pill{
+  padding:6px 16px;border-radius:999px;font-size:.8rem;font-weight:700;
+}
+.pill-ser{background:#fdecea;color:var(--ser);border:1.5px solid #f5b7b1;}
+.pill-hacer{background:#d6eaf8;color:var(--hacer);border:1.5px solid #aed6f1;}
+.pill-saber{background:#d5f5e3;color:var(--saber);border:1.5px solid #a9dfbf;}
+
+/* botones */
+.btn-primary{
+  padding:13px 30px;background:var(--green);color:#fff;
+  border:none;border-radius:12px;font-weight:800;font-size:.95rem;
+  font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;
+  transition:background .2s,transform .15s;display:inline-flex;align-items:center;gap:8px;
+}
+.btn-primary:hover{background:#145f3a;transform:translateY(-2px);}
+.btn-ai{
+  padding:13px 30px;background:linear-gradient(90deg,#7c3aed,#4f46e5);color:#fff;
+  border:none;border-radius:12px;font-weight:800;font-size:.95rem;
+  font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;
+  transition:opacity .2s,transform .15s;display:inline-flex;align-items:center;gap:8px;
+}
+.btn-ai:hover{opacity:.88;transform:translateY(-2px);}
+.btn-ai:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.btn-print{
+  padding:13px 30px;background:var(--accent);color:#fff;
+  border:none;border-radius:12px;font-weight:800;font-size:.95rem;
+  font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;
+  transition:background .2s,transform .15s;display:inline-flex;align-items:center;gap:8px;
+}
+.btn-print:hover{background:#d48806;transform:translateY(-2px);}
+.btn-excel{
+  padding:13px 28px;background:#217346;color:#fff;
+  border:none;border-radius:12px;font-weight:800;font-size:.95rem;
+  font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;
+  transition:background .2s,transform .15s;display:inline-flex;align-items:center;gap:8px;
+}
+.btn-excel:hover{background:#185c38;transform:translateY(-2px);}
+
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;}
+
+/* loading */
+.ai-status{
+  padding:12px 20px;border-radius:10px;font-size:.88rem;font-weight:600;
+  background:var(--green-light);color:var(--green);border:1.5px solid var(--green-mid);
+  display:none;align-items:center;gap:8px;
+}
+.ai-status.show{display:flex;}
+.spinner{
+  width:16px;height:16px;border:2.5px solid var(--green-mid);
+  border-top-color:var(--green2);border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── RUBRICA OUTPUT ── */
+#rubricaOutput{display:none;}
+.rubrica-page{
+  background:#fff;border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden;margin-bottom:28px;
+}
+.rubrica-header{
+  background:linear-gradient(90deg,var(--green) 0%,var(--green2) 100%);
+  padding:20px 28px;color:#fff;
+}
+.rubrica-header h2{font-family:'DM Serif Display',serif;font-size:1.4rem;margin-bottom:4px;}
+.rubrica-header .meta{font-size:.82rem;opacity:.85;display:flex;flex-wrap:wrap;gap:16px;margin-top:8px;}
+.rubrica-header .meta span{display:flex;align-items:center;gap:4px;}
+
+.rubrica-table-wrap{overflow-x:auto;padding:0;}
+table.rubrica{width:100%;border-collapse:collapse;font-size:.8rem;}
+table.rubrica th{
+  padding:10px 12px;text-align:center;font-weight:700;
+  font-size:.72rem;letter-spacing:.8px;text-transform:uppercase;
+}
+table.rubrica td{
+  padding:9px 12px;border:1px solid var(--border);
+  vertical-align:top;line-height:1.45;
+}
+table.rubrica tr:nth-child(even) td{background:#f8fdfb;}
+
+.th-ser{background:#fdecea;color:var(--ser);}
+.th-hacer{background:#d6eaf8;color:var(--hacer);}
+.th-saber{background:#d5f5e3;color:var(--saber);}
+.th-estudiante{background:var(--green-light);color:var(--green);}
+.th-dim{background:#f5f5f5;color:#555;}
+.td-score{text-align:center;font-weight:700;font-size:.85rem;}
+.td-total{text-align:center;font-weight:800;color:var(--green);font-size:.9rem;}
+
+.estudiante-name{font-weight:700;color:var(--text);}
+
+/* criterios card */
+.criterios-table{width:100%;border-collapse:collapse;font-size:.82rem;}
+.criterios-table th{
+  padding:9px 14px;background:var(--green);color:#fff;
+  text-align:left;font-weight:700;font-size:.75rem;letter-spacing:.5px;
+}
+.criterios-table td{padding:9px 14px;border:1px solid var(--border);vertical-align:top;}
+.criterios-table tr:nth-child(even) td{background:#f8fdfb;}
+.badge-dim{
+  display:inline-block;padding:2px 10px;border-radius:999px;font-size:.7rem;font-weight:700;
+}
+
+/* print */
+@media print{
+  @page{size:letter landscape;margin:6mm 8mm;}
+  #lockScreen,#app .top-bar,.card,.actions,.ai-status,
+  #finalActions,.top-bar{display:none!important;}
+  #rubricaOutput{display:block!important;}
+  body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .container{padding:0!important;max-width:100%!important;}
+  .rubrica-page{
+    box-shadow:none!important;border:1px solid #999!important;
+    margin-bottom:4mm;page-break-after:always;width:100%;display:block;
+  }
+  .rubrica-page:last-child{page-break-after:avoid;}
+
+  /* HEADER visible */
+  .rubrica-header{
+    padding:6px 10px!important;
+    background:#1a7a4a!important;color:#fff!important;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .rubrica-header h2{font-size:8pt!important;margin-bottom:2px!important;}
+  .rubrica-header .meta{font-size:5.5pt!important;gap:6px!important;margin-top:3px!important;}
+  .rubrica-header div{font-size:5.5pt!important;}
+
+  /* sección interior */
+  div[style*="padding:20px 24px"]{padding:6px 10px!important;}
+  div[style*="padding:0 24px 24px"]{padding:0 10px 8px!important;}
+  p[style*="margin-bottom"]{font-size:5pt!important;margin-bottom:4px!important;}
+
+  /* dims */
+  .dims{margin-bottom:4px!important;}
+  .dim-pill{padding:1px 6px!important;font-size:5pt!important;}
+
+  /* tabla criterios */
+  .criterios-table{font-size:5pt!important;width:100%!important;table-layout:fixed;}
+  .criterios-table th{padding:3px 4px!important;font-size:5pt!important;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .criterios-table td{padding:3px 4px!important;line-height:1.25!important;font-size:5pt!important;}
+  .badge-dim{padding:1px 5px!important;font-size:4.5pt!important;}
+
+  /* tabla estudiantes */
+  table.rubrica{font-size:5pt!important;width:100%!important;table-layout:fixed;}
+  table.rubrica th{
+    padding:3px 3px!important;font-size:4.5pt!important;
+    white-space:normal!important;word-break:break-word!important;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  table.rubrica td{padding:3px 3px!important;height:13px!important;font-size:5pt!important;}
+  .estudiante-name{font-size:5pt!important;}
+
+  /* firmas */
+  .firmas{padding:5px 10px 8px!important;gap:16px!important;flex-wrap:nowrap!important;}
+  .firma-line{font-size:5.5pt!important;}
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     PANTALLA DE CONTRASEÑA
+═══════════════════════════════════════════ -->
+<div id="lockScreen">
+  <div class="lock-card">
+    <div class="lock-logo"> PC REVIVE<br/><small style="font-size:.9rem;font-family:'Plus Jakarta Sans',sans-serif;font-weight:400;opacity:.7">Rúbricas de Evaluación</small></div>
+    <div class="lock-sub">Acceso docente — Bolivia 2026</div>
+
+    <div class="field">
+      <label class="lock-label">Contraseña de acceso</label>
+      <input class="lock-input" type="password" id="pass1" placeholder="Contraseña del sistema"/>
+    </div>
+
+    <div class="field">
+      <label class="lock-label">Clave API de IA (Groq)</label>
+      <input class="lock-input" type="password" id="pass2" placeholder="gsk_xxxxxxxxxxxxxxxxxxxx"/>
+    </div>
+
+    <div class="lock-err" id="lockErr"></div>
+    <button class="lock-btn" onclick="unlock()">Ingresar →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     APP PRINCIPAL
+═══════════════════════════════════════════ -->
+<div id="app">
+
+  <div class="top-bar">
+    <div>
+      <div class="top-bar-title">Generador de Rúbricas</div>
+      <div class="top-bar-sub">PC REVIVE · Sistema Educativo Bolivia · Ser 10 | Hacer 40 | Saber 45</div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Salir</button>
+  </div>
+
+  <div class="container">
+
+    <!-- ── DATOS GENERALES ── -->
+    <div class="card" id="configCard">
+      <div class="card-title"><span></span> Datos de la Institución</div>
+      <div class="grid-3" style="margin-bottom:16px;">
+        <div class="field"><label>Unidad Educativa</label><input type="text" id="colegio" placeholder="Nombre del colegio"/></div>
+        <div class="field"><label>Distrito</label><input type="text" id="distrito" placeholder="Distrito educativo"/></div>
+        <div class="field"><label>Municipio</label><input type="text" id="municipio" placeholder="Municipio"/></div>
+      </div>
+      <div class="grid-4">
+        <div class="field"><label>Docente</label><input type="text" id="docente" placeholder="Nombre completo"/></div>
+        <div class="field"><label>Área / Materia</label><input type="text" id="materia" placeholder="Ej: Matemáticas"/></div>
+        <div class="field">
+          <label>Curso</label>
+          <select id="curso">
+            <option value="">— Seleccionar —</option>
+            <optgroup label="Primaria">
+              <option>1ro Primaria</option><option>2do Primaria</option><option>3ro Primaria</option>
+              <option>4to Primaria</option><option>5to Primaria</option><option>6to Primaria</option>
+            </optgroup>
+            <optgroup label="Secundaria">
+              <option>1ro Secundaria</option><option>2do Secundaria</option><option>3ro Secundaria</option>
+              <option>4to Secundaria</option><option>5to Secundaria</option><option>6to Secundaria</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="field"><label>Paralelo</label><input type="text" id="paralelo" placeholder="Ej: A"/></div>
+      </div>
+    </div>
+
+    <!-- ── PERIODO Y ESTUDIANTES ── -->
+    <div class="card">
+      <div class="card-title"><span></span> Periodo y Estudiantes</div>
+      <div class="grid-4">
+        <div class="field"><label>Fecha inicio</label><input type="date" id="fechaInicio"/></div>
+        <div class="field"><label>Fecha fin</label><input type="date" id="fechaFin"/></div>
+        <div class="field"><label>Bimestre / Trimestre</label>
+          <select id="bimestre">
+            <option value="">— Seleccionar —</option>
+            <option>1er Bimestre</option><option>2do Bimestre</option>
+            <option>3er Bimestre</option><option>4to Bimestre</option>
+            <option>1er Trimestre</option><option>2do Trimestre</option><option>3er Trimestre</option>
+          </select>
+        </div>
+        <div class="field"><label>Cantidad de estudiantes</label>
+          <input type="number" id="numEstudiantes" min="1" max="60" value="20" placeholder="20"/>
+        </div>
+      </div>
+
+      <!-- Nombres de estudiantes -->
+      <div style="margin-top:18px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <label style="font-size:.76rem;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">Lista de estudiantes</label>
+          <button class="btn-primary" style="padding:7px 16px;font-size:.8rem;" onclick="generarCamposEstudiantes()">Generar campos</button>
+        </div>
+        <div id="estudiantesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;"></div>
+      </div>
+    </div>
+
+    <!-- ── SEMANAS ── -->
+    <div class="card">
+      <div class="card-title"><span></span> Duración de la Rúbrica</div>
+      <div class="weeks-toggle">
+        <div class="week-opt active" onclick="setWeeks(1,this)">1 Semana</div>
+        <div class="week-opt" onclick="setWeeks(2,this)">2 Semanas</div>
+        <div class="week-opt" onclick="setWeeks(4,this)">4 Semanas</div>
+      </div>
+      <div id="semanasContainer"></div>
+    </div>
+
+    <!-- ── IA ── -->
+    <div class="card">
+      <div class="card-title"><span></span> Generación con IA </div>
+      <p style="font-size:.87rem;color:var(--muted);margin-bottom:16px;">
+        La IA leerá los contenidos ingresados y generará automáticamente: criterios de evaluación detallados para <strong>Ser, Hacer y Saber</strong>, indicadores de logro y descriptores por nivel.
+      </p>
+      <div class="actions">
+        <button class="btn-ai" id="btnIA" onclick="generarConIA()">✨ Generar Rúbrica con IA</button>
+        <button class="btn-primary" onclick="generarManual()">📋 Generar sin IA</button>
+      </div>
+      <div class="ai-status" id="aiStatus">
+        <div class="spinner"></div>
+        <span id="aiStatusMsg">Consultando IA, por favor espera...</span>
+      </div>
+    </div>
+
+    <!-- ── OUTPUT ── -->
+    <div id="rubricaOutput"></div>
+
+    <!-- acciones finales -->
+    <div id="finalActions" style="display:none;" class="actions">
+      <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+      <button class="btn-excel" onclick="exportarExcelRubrica()">📊 Exportar Excel</button>
+      <button class="btn-primary" onclick="resetForm()">🔄 Nueva Rúbrica</button>
+    </div>
+
+  </div><!-- /container -->
+</div><!-- /app -->
+
+<script>
+// ════════════════════════════════════════════
+//  CONFIGURACIÓN
+// ════════════════════════════════════════════
+let GROQ_KEY = '';
+let numSemanas = 1;
+// SYS_PASS ya no va aquí — está en el servidor
+
+async function intentarLogin(){
+  const pass    = document.getElementById('inp-pass').value.trim();
+  const apikey  = document.getElementById('inp-apikey').value.trim();
+  const errEl   = document.getElementById('login-err');
+  const btnLogin = document.querySelector('.btn-login');
+
+  errEl.style.display = 'none';
+
+  if(!apikey.startsWith('gsk_')){
+    errEl.style.display = 'block';
+    errEl.textContent = '⚠️ La API Key debe comenzar con "gsk_".';
+    return;
+  }
+
+  btnLogin.disabled = true;
+  btnLogin.textContent = 'Verificando...';
+
+  try {
+    const resp = await fetch('/.netlify/functions/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pass, apikey: apikey })
+    });
+    const data = await resp.json();
+
+    if(!data.ok){
+      errEl.style.display = 'block';
+      errEl.textContent = '⚠️ ' + (data.error || 'Contraseña incorrecta');
+      return;
+    }
+
+    // Login correcto — aquí va lo que hacía antes después del login
+    GROQ_KEY = apikey;
+    document.getElementById('pantalla-login').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+
+  } catch(e) {
+    errEl.style.display = 'block';
+    errEl.textContent = '⚠️ Error de conexión. Intenta de nuevo.';
+  } finally {
+    btnLogin.disabled = false;
+    btnLogin.textContent = 'Ingresar →';
+  }
+}
+// ════════════════════════════════════════════
+//  LOCK / UNLOCK
+// ════════════════════════════════════════════
+function unlock(){
+  const p1 = document.getElementById('pass1').value.trim();
+  const p2 = document.getElementById('pass2').value.trim();
+  const err = document.getElementById('lockErr');
+  if(p1 !== SYS_PASS){ err.textContent='Contraseña incorrecta.'; return; }
+  if(!p2.startsWith('gsk_') && !p2.startsWith('groq')&&p2.length<20){
+    err.textContent='Ingresa una clave API de Groq válida.'; return;
+  }
+  GROQ_KEY = p2;
+  err.textContent='';
+  document.getElementById('lockScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  setWeeks(1, document.querySelector('.week-opt.active'));
+}
+
+function logout(){
+  GROQ_KEY='';
+  document.getElementById('lockScreen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('pass1').value='';
+  document.getElementById('pass2').value='';
+}
+
+document.addEventListener('keydown',e=>{ if(e.key==='Enter') unlock(); });
+
+// ════════════════════════════════════════════
+//  SEMANAS
+// ════════════════════════════════════════════
+function setWeeks(n, el){
+  numSemanas = n;
+  document.querySelectorAll('.week-opt').forEach(o=>o.classList.remove('active'));
+  el.classList.add('active');
+  renderSemanasForm();
+}
+
+function renderSemanasForm(){
+  const c = document.getElementById('semanasContainer');
+  c.innerHTML='';
+  for(let i=1;i<=numSemanas;i++){
+    c.innerHTML+=`
+    <div class="semana-block">
+      <h4>📅 Semana ${i}</h4>
+      <div class="grid-2" style="margin-bottom:12px;">
+        <div class="field"><label>Contenido / Tema</label>
+          <textarea id="contenido_s${i}" placeholder="Describe el contenido que se desarrollará esta semana..."></textarea>
+        </div>
+        <div class="field"><label>Material / Recursos</label>
+          <textarea id="material_s${i}" placeholder="Libros, fichas, herramientas, TIC..."></textarea>
+        </div>
+      </div>
+      <div class="field"><label>Producto esperado por el docente</label>
+        <input type="text" id="producto_s${i}" placeholder="Ej: Maqueta, informe escrito, exposición oral..."/>
+      </div>
+    </div>`;
+  }
+}
+
+// ════════════════════════════════════════════
+//  ESTUDIANTES
+// ════════════════════════════════════════════
+function generarCamposEstudiantes(){
+  const n = parseInt(document.getElementById('numEstudiantes').value)||20;
+  const grid = document.getElementById('estudiantesGrid');
+  grid.innerHTML='';
+  for(let i=1;i<=n;i++){
+    grid.innerHTML+=`<input type="text" id="est_${i}"
+      placeholder="Estudiante ${i}"
+      style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;
+             font-family:'Plus Jakarta Sans',sans-serif;font-size:.85rem;
+             background:var(--bg);color:var(--text);outline:none;width:100%;"/>`;
+  }
+}
+
+function getEstudiantes(){
+  const n = parseInt(document.getElementById('numEstudiantes').value)||20;
+  const lista=[];
+  for(let i=1;i<=n;i++){
+    const el=document.getElementById(`est_${i}`);
+    lista.push(el&&el.value.trim()?el.value.trim():`Est.`);
+  }
+  return lista;
+}
+
+function getSemanasData(){
+  const semanas=[];
+  for(let i=1;i<=numSemanas;i++){
+    semanas.push({
+      semana:i,
+      contenido:document.getElementById(`contenido_s${i}`)?.value||'',
+      material:document.getElementById(`material_s${i}`)?.value||'',
+      producto:document.getElementById(`producto_s${i}`)?.value||''
+    });
+  }
+  return semanas;
+}
+
+function getDatos(){
+  return {
+    colegio:document.getElementById('colegio').value||'U.E. sin nombre',
+    distrito:document.getElementById('distrito').value||'',
+    municipio:document.getElementById('municipio').value||'',
+    docente:document.getElementById('docente').value||'',
+    materia:document.getElementById('materia').value||'',
+    curso:document.getElementById('curso').value||'',
+    paralelo:document.getElementById('paralelo').value||'',
+    fechaInicio:document.getElementById('fechaInicio').value||'',
+    fechaFin:document.getElementById('fechaFin').value||'',
+    bimestre:document.getElementById('bimestre').value||'',
+  };
+}
+
+// ════════════════════════════════════════════
+//  GROQ API
+// ════════════════════════════════════════════
+async function callGroq(prompt){
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'Authorization':'Bearer '+GROQ_KEY
+    },
+    body:JSON.stringify({
+      model:'llama3-8b-8192',
+      max_tokens:1200,
+      temperature:0.4,
+      messages:[
+        {role:'system',content:`Eres un experto en educación boliviana. Respondes SOLO JSON válido, sin explicaciones ni markdown.
+Sistema boliviano: SER=10pts, HACER=40pts, SABER=45pts. Total=95pts.
+Niveles: Excelente(100%), Bueno(75%), En proceso(50%), Inicio(25%).`},
+        {role:'user',content:prompt}
+      ]
+    })
+  });
+  if(!resp.ok) throw new Error('Error Groq: '+resp.status);
+  const data=await resp.json();
+  return data.choices[0].message.content;
+}
+
+// ════════════════════════════════════════════
+//  GENERAR CON IA
+// ════════════════════════════════════════════
+async function generarConIA(){
+  const semanas=getSemanasData();
+  const datos=getDatos();
+  const btn=document.getElementById('btnIA');
+  const status=document.getElementById('aiStatus');
+  const msg=document.getElementById('aiStatusMsg');
+
+  btn.disabled=true;
+  status.classList.add('show');
+
+  const criteriosPorSemana=[];
+
+  for(let i=0;i<semanas.length;i++){
+    msg.textContent=`Semana ${i+1}: generando criterios con IA...`;
+    const s=semanas[i];
+    const prompt=`Materia: ${datos.materia}. Curso: ${datos.curso}. Semana ${s.semana}.
+Contenido: "${s.contenido}". Material: "${s.material}". Producto: "${s.producto}".
+
+Genera criterios de evaluación CONCISOS para Bolivia (SER 10pts, HACER 40pts, SABER 45pts).
+Responde SOLO este JSON:
+{
+  "ser":{"criterio":"...","excelente":"...","bueno":"...","en_proceso":"...","inicio":"..."},
+  "hacer":{"criterio":"...","excelente":"...","bueno":"...","en_proceso":"...","inicio":"..."},
+  "saber":{"criterio":"...","excelente":"...","bueno":"...","en_proceso":"...","inicio":"..."}
+}`;
+    try{
+      const raw=await callGroq(prompt);
+      const clean=raw.replace(/```json|```/g,'').trim();
+      criteriosPorSemana.push(JSON.parse(clean));
+    } catch(e){
+      criteriosPorSemana.push(criteriosDefault(s));
+    }
+  }
+
+  btn.disabled=false;
+  status.classList.remove('show');
+  renderRubrica(semanas, criteriosPorSemana, getDatos(), getEstudiantes());
+}
+
+// ════════════════════════════════════════════
+//  GENERAR MANUAL (sin IA)
+// ════════════════════════════════════════════
+function generarManual(){
+  const semanas=getSemanasData();
+  const criterios=semanas.map(s=>criteriosDefault(s));
+  renderRubrica(semanas, criterios, getDatos(), getEstudiantes());
+}
+
+function criteriosDefault(s){
+  const tema=s.contenido||'el contenido de la semana';
+  return {
+    ser:{
+      criterio:`Responsabilidad, respeto y valores durante las actividades de ${tema}`,
+      excelente:'Demuestra valores exemplares, participación activa y actitud positiva constante.',
+      bueno:'Cumple con sus responsabilidades y muestra buena actitud la mayoría del tiempo.',
+      en_proceso:'En ocasiones cumple, requiere orientación para mantener valores.',
+      inicio:'Presenta dificultades para demostrar valores y responsabilidad.'
+    },
+    hacer:{
+      criterio:`Aplicación práctica y desarrollo de habilidades: ${s.producto||'producto solicitado'}`,
+      excelente:'Aplica correctamente todos los procedimientos, producto entregado con calidad superior.',
+      bueno:'Aplica la mayoría de procedimientos, producto entregado con calidad aceptable.',
+      en_proceso:'Aplica algunos procedimientos con apoyo del docente, producto incompleto.',
+      inicio:'Requiere apoyo constante, producto no concluido o con errores significativos.'
+    },
+    saber:{
+      criterio:`Dominio conceptual y teórico de: ${tema}`,
+      excelente:'Demuestra dominio completo de conceptos, explica y relaciona con otros temas.',
+      bueno:'Comprende los conceptos fundamentales con pequeñas imprecisiones.',
+      en_proceso:'Comprende parcialmente los conceptos, confunde algunos términos.',
+      inicio:'Presenta comprensión mínima de los conceptos trabajados.'
+    }
+  };
+}
+
+// ════════════════════════════════════════════
+//  RENDER RUBRICA
+// ════════════════════════════════════════════
+function renderRubrica(semanas, criterios, datos, estudiantes){
+  const out=document.getElementById('rubricaOutput');
+  out.innerHTML='';
+  out.style.display='block';
+
+  semanas.forEach((s,idx)=>{
+    const c=criterios[idx];
+    const bloque=document.createElement('div');
+    bloque.className='rubrica-page';
+
+    // header
+    bloque.innerHTML=`
+    <div class="rubrica-header">
+      <h2>Rúbrica de Evaluación · Semana ${s.semana}</h2>
+      <div class="meta">
+        <span>🏫 ${datos.colegio}</span>
+        <span>📍 ${datos.distrito}${datos.municipio?' · '+datos.municipio:''}</span>
+        <span>👩‍🏫 ${datos.docente}</span>
+        <span>📚 ${datos.materia} — ${datos.curso} ${datos.paralelo}</span>
+        <span>📅 ${datos.fechaInicio} al ${datos.fechaFin}</span>
+        <span>📆 ${datos.bimestre}</span>
+      </div>
+      <div style="margin-top:10px;font-size:.82rem;opacity:.9;">
+        <strong>Contenido:</strong> ${s.contenido} &nbsp;|&nbsp;
+        <strong>Producto:</strong> ${s.producto}
+      </div>
+    </div>`;
+
+    // tabla de criterios
+    const tc=document.createElement('div');
+    tc.style.cssText='padding:20px 24px;';
+    tc.innerHTML=`
+    <p style="font-size:.8rem;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Criterios e Indicadores de Evaluación</p>
+    <div class="dims">
+      <span class="dim-pill pill-ser">SER · 10 pts</span>
+      <span class="dim-pill pill-hacer">HACER · 40 pts</span>
+      <span class="dim-pill pill-saber">SABER · 45 pts</span>
+    </div>
+    <table class="criterios-table">
+      <thead>
+        <tr>
+          <th style="width:12%">Dimensión</th>
+          <th style="width:24%">Criterio</th>
+          <th>Excelente (100%)</th>
+          <th>Bueno (75%)</th>
+          <th>En Proceso (50%)</th>
+          <th>Inicio (25%)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge-dim pill-ser">SER</span></td>
+          <td>${c.ser.criterio}</td>
+          <td>${c.ser.excelente}</td>
+          <td>${c.ser.bueno}</td>
+          <td>${c.ser.en_proceso}</td>
+          <td>${c.ser.inicio}</td>
+        </tr>
+        <tr>
+          <td><span class="badge-dim pill-hacer">HACER</span></td>
+          <td>${c.hacer.criterio}</td>
+          <td>${c.hacer.excelente}</td>
+          <td>${c.hacer.bueno}</td>
+          <td>${c.hacer.en_proceso}</td>
+          <td>${c.hacer.inicio}</td>
+        </tr>
+        <tr>
+          <td><span class="badge-dim pill-saber">SABER</span></td>
+          <td>${c.saber.criterio}</td>
+          <td>${c.saber.excelente}</td>
+          <td>${c.saber.bueno}</td>
+          <td>${c.saber.en_proceso}</td>
+          <td>${c.saber.inicio}</td>
+        </tr>
+      </tbody>
+    </table>`;
+    bloque.appendChild(tc);
+
+    // tabla de calificación por estudiante
+    const te=document.createElement('div');
+    te.style.cssText='padding:0 24px 24px;';
+    te.innerHTML=`
+    <p style="font-size:.8rem;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:16px;">Registro de Calificaciones — ${estudiantes.length} Estudiantes</p>
+    <div class="rubrica-table-wrap">
+    <table class="rubrica">
+      <thead>
+        <tr>
+          <th rowspan="2" class="th-estudiante" style="text-align:left;min-width:160px;">Estudiante</th>
+          <th colspan="2" class="th-ser">SER (10 pts)</th>
+          <th colspan="2" class="th-hacer">HACER (40 pts)</th>
+          <th colspan="2" class="th-saber">SABER (45 pts)</th>
+          <th rowspan="2" class="th-dim">Total<br/>(95)</th>
+          <th rowspan="2" class="th-dim">Obs.</th>
+        </tr>
+        <tr>
+          <th class="th-ser">Pts</th><th class="th-ser">Nivel</th>
+          <th class="th-hacer">Pts</th><th class="th-hacer">Nivel</th>
+          <th class="th-saber">Pts</th><th class="th-saber">Nivel</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${estudiantes.map((est,i)=>`
+        <tr>
+          <td class="estudiante-name">${i+1}. ${est}</td>
+          <td class="td-score" style="min-width:40px;"> </td>
+          <td style="min-width:80px;"> </td>
+          <td class="td-score" style="min-width:40px;"> </td>
+          <td style="min-width:80px;"> </td>
+          <td class="td-score" style="min-width:40px;"> </td>
+          <td style="min-width:80px;"> </td>
+          <td class="td-total"> </td>
+          <td style="min-width:100px;"> </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>`;
+    bloque.appendChild(te);
+
+    // firma
+    const firma=document.createElement('div');
+    firma.style.cssText='padding:16px 28px 24px;display:flex;gap:40px;flex-wrap:wrap;';
+    firma.innerHTML=`
+      <div style="text-align:center;flex:1;min-width:140px;">
+        <div style="border-top:1.5px solid #aaa;padding-top:6px;font-size:.78rem;color:var(--muted);">
+          Firma del Docente<br/><strong>${datos.docente}</strong>
+        </div>
+      </div>
+      <div style="text-align:center;flex:1;min-width:140px;">
+        <div style="border-top:1.5px solid #aaa;padding-top:6px;font-size:.78rem;color:var(--muted);">
+          V°B° Director/a
+        </div>
+      </div>
+      <div style="text-align:center;flex:1;min-width:140px;">
+        <div style="border-top:1.5px solid #aaa;padding-top:6px;font-size:.78rem;color:var(--muted);">
+          Sello Institucional
+        </div>
+      </div>`;
+    bloque.appendChild(firma);
+
+    out.appendChild(bloque);
+  });
+
+  document.getElementById('finalActions').style.display='flex';
+  out.scrollIntoView({behavior:'smooth'});
+}
+
+
+// ════════════════════════════════════════════
+//  EXPORTAR EXCEL RÚBRICAS
+// ════════════════════════════════════════════
+function exportarExcelRubrica(){
+  const datos = getDatos();
+  const estudiantes = getEstudiantes();
+  const wb = XLSX.utils.book_new();
+
+  const CLR = {
+    green:'1A7A4A', green2:'25A865', greenLight:'D1FAE5', greenMid:'A7F3D0',
+    ser:'B91C1C', serLight:'FEE2E2',
+    hacer:'1D4ED8', hacerLight:'DBEAFE',
+    saber:'15803D', saberLight:'DCFCE7',
+    excelente:'166534', bueno:'1D4ED8', proceso:'92400E', inicio:'991B1B',
+    excelenteBg:'DCFCE7', buenoBg:'DBEAFE', procesoBg:'FEF3C7', inicioBg:'FEE2E2',
+    totalBg:'EDE9FE', blanco:'FFFFFF'
+  };
+
+  const semanas = getSemanasData();
+
+  semanas.forEach((s, si)=>{
+    const c2 = criteriosPorSemana && criteriosPorSemana[si] ? criteriosPorSemana[si] : criteriosDefault(s);
+    const ws = {};
+    const merges = [];
+    let R = 0;
+
+    // ── TÍTULO ──
+    ws[XLSX.utils.encode_cell({r:R,c:0})] = {v:`RÚBRICA DE EVALUACIÓN – SEMANA ${s.semana}`, t:'s',
+      s:{font:{bold:true,color:{rgb:'FFFFFF'},size:13},fill:{fgColor:{rgb:CLR.green}},
+         alignment:{horizontal:'center',vertical:'center'}}};
+    merges.push({s:{r:R,c:0},e:{r:R,c:11}});
+    R++;
+
+    // ── INFO ──
+    const info = [
+      [`U.E.: ${datos.colegio}`,`Distrito: ${datos.distrito}`,`Municipio: ${datos.municipio}`],
+      [`Docente: ${datos.docente}`,`Materia: ${datos.materia}`,`Curso: ${datos.curso} ${datos.paralelo}`],
+      [`Periodo: ${datos.fechaInicio} al ${datos.fechaFin}`,`${datos.bimestre}`,`Contenido: ${s.contenido} | Producto: ${s.producto}`]
+    ];
+    info.forEach(row=>{
+      row.forEach((txt,ci)=>{
+        ws[XLSX.utils.encode_cell({r:R,c:ci*4})] = {v:txt,t:'s',
+          s:{font:{size:8,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:CLR.green2}},
+             alignment:{horizontal:'left',vertical:'center',wrapText:true}}};
+        merges.push({s:{r:R,c:ci*4},e:{r:R,c:ci*4+3}});
+      });
+      R++;
+    });
+
+    // ── TABLA CRITERIOS ──
+    R++;
+    // encabezado criterios
+    const hdrCrit = ['Dimensión','Criterio de Evaluación','Excelente (100%)','Bueno (75%)','En Proceso (50%)','Inicio (25%)'];
+    const hdrBgs = [CLR.green,CLR.green,CLR.excelente,CLR.bueno,CLR.proceso,CLR.inicio];
+    hdrCrit.forEach((h,ci)=>{
+      ws[XLSX.utils.encode_cell({r:R,c:ci})] = {v:h,t:'s',
+        s:{font:{bold:true,color:{rgb:'FFFFFF'},size:8},fill:{fgColor:{rgb:hdrBgs[ci]}},
+           alignment:{horizontal:'center',vertical:'center',wrapText:true},
+           border:{top:{style:'medium',color:{rgb:'000000'}},bottom:{style:'medium',color:{rgb:'000000'}},
+                   left:{style:'medium',color:{rgb:'000000'}},right:{style:'medium',color:{rgb:'000000'}}}}};
+    });
+    R++;
+
+    const dimRows = [
+      {dim:'SER (10 pts)', bg:CLR.serLight, color:CLR.ser, data:c2.ser},
+      {dim:'HACER (40 pts)', bg:CLR.hacerLight, color:CLR.hacer, data:c2.hacer},
+      {dim:'SABER (45 pts)', bg:CLR.saberLight, color:CLR.saber, data:c2.saber},
+    ];
+    dimRows.forEach(dr=>{
+      [dr.dim, dr.data.criterio, dr.data.excelente, dr.data.bueno, dr.data.en_proceso, dr.data.inicio].forEach((v,ci)=>{
+        const bgMap = ['FFFFFF', 'FFFFFF', CLR.excelenteBg, CLR.buenoBg, CLR.procesoBg, CLR.inicioBg];
+        const fgMap = [dr.color, '1E1B2E', CLR.excelente, CLR.bueno, CLR.proceso, CLR.inicio];
+        ws[XLSX.utils.encode_cell({r:R,c:ci})] = {v:v||'',t:'s',
+          s:{font:{bold:ci===0,size:8,color:{rgb:fgMap[ci]}},
+             fill:{fgColor:{rgb:ci===0?dr.bg:bgMap[ci]}},
+             alignment:{horizontal:ci===0?'center':'left',vertical:'top',wrapText:true},
+             border:{top:{style:'thin',color:{rgb:'CCCCCC'}},bottom:{style:'thin',color:{rgb:'CCCCCC'}},
+                     left:{style:'thin',color:{rgb:'CCCCCC'}},right:{style:'thin',color:{rgb:'CCCCCC'}}}}};
+      });
+      R++;
+    });
+
+    // ── TABLA CALIFICACIONES ──
+    R++;
+    ws[XLSX.utils.encode_cell({r:R,c:0})] = {v:'REGISTRO DE CALIFICACIONES', t:'s',
+      s:{font:{bold:true,color:{rgb:'FFFFFF'},size:10},fill:{fgColor:{rgb:CLR.green}},
+         alignment:{horizontal:'center',vertical:'center'}}};
+    merges.push({s:{r:R,c:0},e:{r:R,c:11}});
+    R++;
+
+    // encabezado fila 1
+    const hdrs1 = ['','SER (10 pts)','','HACER (40 pts)','','SABER (45 pts)','','TOTAL (95)','Nota','Obs.'];
+    const hdrs1Bg = ['4C1D95',CLR.ser,CLR.ser,CLR.hacer,CLR.hacer,CLR.saber,CLR.saber,'374151','374151','374151'];
+    const hdrs1Span = [[0,0],[1,2],[1,2],[3,4],[3,4],[5,6],[5,6],[7,7],[8,8],[9,9]]; // merge pairs
+    ws[XLSX.utils.encode_cell({r:R,c:0})] = {v:'Estudiante',t:'s',
+      s:{font:{bold:true,color:{rgb:'FFFFFF'},size:8},fill:{fgColor:{rgb:'4C1D95'}},
+         alignment:{horizontal:'center',vertical:'center'}}};
+    merges.push({s:{r:R,c:0},e:{r:R+1,c:0}});
+    [[1,'SER (10 pts)',CLR.ser],[3,'HACER (40 pts)',CLR.hacer],[5,'SABER (45 pts)',CLR.saber],[7,'TOTAL','374151'],[8,'Nota','374151'],[9,'Obs.','374151']].forEach(([col,lbl,bg])=>{
+      ws[XLSX.utils.encode_cell({r:R,c:col})] = {v:lbl,t:'s',
+        s:{font:{bold:true,color:{rgb:'FFFFFF'},size:8},fill:{fgColor:{rgb:bg}},
+           alignment:{horizontal:'center',vertical:'center'}}};
+      if(col<=6) merges.push({s:{r:R,c:col},e:{r:R,c:col+1}});
+      else merges.push({s:{r:R,c:col},e:{r:R+1,c:col}});
+    });
+    R++;
+
+    // encabezado fila 2
+    [[1,'Pts',CLR.ser],[2,'Nivel',CLR.ser],[3,'Pts',CLR.hacer],[4,'Nivel',CLR.hacer],[5,'Pts',CLR.saber],[6,'Nivel',CLR.saber]].forEach(([col,lbl,bg])=>{
+      ws[XLSX.utils.encode_cell({r:R,c:col})] = {v:lbl,t:'s',
+        s:{font:{bold:true,color:{rgb:'FFFFFF'},size:7.5},fill:{fgColor:{rgb:bg}},
+           alignment:{horizontal:'center',vertical:'center'}}};
+    });
+    R++;
+
+    const dataStart = R;
+    // Columnas: A=nombre, B=serPts, C=serNivel, D=hacerPts, E=hacerNivel, F=saberPts, G=saberNivel, H=total, I=nota, J=obs
+    estudiantes.forEach((est,ei)=>{
+      const rowBg = ei%2===0?'FFFFFF':'F9FAFB';
+      const excelRow = R+1;
+      ws[XLSX.utils.encode_cell({r:R,c:0})] = {v:`${ei+1}. ${est}`,t:'s',
+        s:{font:{bold:true,size:8},fill:{fgColor:{rgb:rowBg}},alignment:{horizontal:'left',vertical:'center'},
+           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
+                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+      // SER pts
+      ws[XLSX.utils.encode_cell({r:R,c:1})] = {v:'',t:'n',
+        s:{font:{bold:true,color:{rgb:CLR.ser},size:9},fill:{fgColor:{rgb:CLR.serLight}},
+           alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',
+           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
+                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+      // SER nivel
+      ws[XLSX.utils.encode_cell({r:R,c:2})] = {v:'',t:'s',
+        s:{font:{size:7.5},fill:{fgColor:{rgb:'FFFFFF'}},alignment:{horizontal:'center',vertical:'center'},
+           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
+                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+      ws[XLSX.utils.encode_cell({r:R,c:3})] = {v:'',t:'n',
+        s:{font:{bold:true,color:{rgb:CLR.hacer},size:9},fill:{fgColor:{rgb:CLR.hacerLight}},
+           alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',
+           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
+                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+      ws[XLSX.utils.encode_cell({r:R,c:4})] = {v:'',t:'s',
+        s:{font:{size:7.5},fill:{fgColor:{rgb:'FFFFFF'}},alignment:{horizontal:'center',vertical:'center'},
+           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
+                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+      ws[XLSX.utils.encode_cell({r:R,c:5})] = {v:'',t:'n',
+        s:{font:{bold:true,color:{rgb:CLR.saber},size:9},fill:{fgColor:{rgb:CLR.saberLight}},
+           alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',
+           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
+                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+      ws[XLSX.utils.encode_cell({r:R,c:6})] = {v:'',t:'s',
+        s:{font:{size:7.5},fill:{fgColor:{rgb:'FFFFFF'}},alignment:{horizontal:'center',vertical:'center'},
+           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
+                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+      // TOTAL fórmula
+      ws[XLSX.utils.encode_cell({r:R,c:7})] = {
+        f:`IFERROR(B${excelRow}+D${excelRow}+F${excelRow},0)`,t:'n',
+        s:{font:{bold:true,color:{rgb:CLR.green},size:10},fill:{fgColor:{rgb:CLR.totalBg}},
+           alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',
+           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
+                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+      // NOTA (sobre 100)
+      ws[XLSX.utils.encode_cell({r:R,c:8})] = {
+        f:`IFERROR(ROUND(H${excelRow}/95*100,1),0)`,t:'n',
+        s:{font:{bold:true,size:9,color:{rgb:'374151'}},fill:{fgColor:{rgb:'F3F4F6'}},
+           alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',
+           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
+                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+      ws[XLSX.utils.encode_cell({r:R,c:9})] = {v:'',t:'s',
+        s:{fill:{fgColor:{rgb:rowBg}},
+           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
+                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+      R++;
+    });
+
+    // FILA PROMEDIOS
+    const dataEnd = R;
+    ws[XLSX.utils.encode_cell({r:R,c:0})] = {v:'PROMEDIOS DEL CURSO',t:'s',
+      s:{font:{bold:true,size:9},fill:{fgColor:{rgb:'DDD6FE'}},alignment:{horizontal:'center',vertical:'center'},
+         border:{top:{style:'medium',color:{rgb:CLR.green}},bottom:{style:'medium',color:{rgb:CLR.green}},
+                 left:{style:'medium',color:{rgb:CLR.green}},right:{style:'medium',color:{rgb:CLR.green}}}}};
+    [1,3,5,7,8].forEach(col=>{
+      const colL = XLSX.utils.encode_col(col);
+      const bgMap = {1:CLR.serLight,3:CLR.hacerLight,5:CLR.saberLight,7:CLR.totalBg,8:'F3F4F6'};
+      const clrMap = {1:CLR.ser,3:CLR.hacer,5:CLR.saber,7:CLR.green,8:'374151'};
+      ws[XLSX.utils.encode_cell({r:R,c:col})] = {
+        f:`ROUND(AVERAGE(${colL}${dataStart+1}:${colL}${dataEnd}),1)`,t:'n',
+        s:{font:{bold:true,color:{rgb:clrMap[col]},size:10},fill:{fgColor:{rgb:bgMap[col]}},
+           alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',
+           border:{top:{style:'medium',color:{rgb:CLR.green}},bottom:{style:'medium',color:{rgb:CLR.green}},
+                   left:{style:'medium',color:{rgb:CLR.green}},right:{style:'medium',color:{rgb:CLR.green}}}}};
+    });
+    for(let col=0;col<=9;col++){
+      if(![0,1,3,5,7,8].includes(col)){
+        ws[XLSX.utils.encode_cell({r:R,c:col})] = {v:'',t:'s',
+          s:{fill:{fgColor:{rgb:'DDD6FE'}},
+             border:{top:{style:'medium',color:{rgb:CLR.green}},bottom:{style:'medium',color:{rgb:CLR.green}},
+                     left:{style:'medium',color:{rgb:CLR.green}},right:{style:'medium',color:{rgb:CLR.green}}}}};
+      }
+    }
+    R+=2;
+
+    // FIRMAS
+    ['Firma del Docente: '+datos.docente,"V°B° Director/a","Sello Institucional"].forEach((txt,fi)=>{
+      const cc = fi*3;
+      ws[XLSX.utils.encode_cell({r:R,c:cc})] = {v:'_'.repeat(25),t:'s',s:{font:{size:8},alignment:{horizontal:'center'}}};
+      ws[XLSX.utils.encode_cell({r:R+1,c:cc})] = {v:txt,t:'s',s:{font:{bold:true,size:7.5},fill:{fgColor:{rgb:'F3F4F6'}},alignment:{horizontal:'center'}}};
+      merges.push({s:{r:R,c:cc},e:{r:R,c:cc+2}});
+      merges.push({s:{r:R+1,c:cc},e:{r:R+1,c:cc+2}});
+    });
+
+    ws['!cols']=[{wch:28},{wch:8},{wch:14},{wch:8},{wch:14},{wch:8},{wch:14},{wch:9},{wch:8},{wch:18}];
+    ws['!merges']=merges;
+    ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:R+2,c:9}});
+    ws['!pageSetup']={orientation:'landscape',paperSize:1,fitToPage:true,fitToWidth:1,fitToHeight:0};
+    ws['!margins']={left:0.3,right:0.3,top:0.3,bottom:0.3,header:0.1,footer:0.1};
+
+    XLSX.utils.book_append_sheet(wb, ws, `Semana ${s.semana}`);
+  });
+
+  // hoja resumen instrucciones
+  const wsI = {};
+  [
+    ['📋 INSTRUCCIONES – RÚBRICA'],[''],
+    ['En las columnas "Pts SER / HACER / SABER" ingresa el puntaje directo obtenido:'],
+    ['  • SER: entre 0 y 10 puntos'],['  • HACER: entre 0 y 40 puntos'],['  • SABER: entre 0 y 45 puntos'],[''],
+    ['La columna TOTAL suma automáticamente los tres puntajes.'],
+    ['La columna NOTA convierte el total a escala de 100.'],[''],
+    ['Escala de referencia por dimensión:'],
+    ['  • Excelente: SER=10, HACER=40, SABER=45'],
+    ['  • Bueno (75%): SER=7.5, HACER=30, SABER=33.75'],
+    ['  • En Proceso (50%): SER=5, HACER=20, SABER=22.5'],
+    ['  • Inicio (25%): SER=2.5, HACER=10, SABER=11.25'],[''],
+    ['PC REVIVE · Tel. 74412748'],
+  ].forEach((row,ri)=>{
+    wsI[XLSX.utils.encode_cell({r:ri,c:0})]={v:row[0]||'',t:'s',
+      s:{font:{bold:ri===0,size:ri===0?12:9,color:{rgb:ri===0?'1A7A4A':'1E1B2E'}},
+         alignment:{horizontal:'left',vertical:'center'}}};
+  });
+  wsI['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:18,c:0}});
+  wsI['!cols']=[{wch:70}];
+  XLSX.utils.book_append_sheet(wb, wsI, 'Instrucciones');
+
+  const fecha = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `Rubrica_${datos.curso}_${datos.bimestre}_${fecha}.xlsx`);
+}
+
+function resetForm(){
+  document.getElementById('rubricaOutput').innerHTML='';
+  document.getElementById('rubricaOutput').style.display='none';
+  document.getElementById('finalActions').style.display='none';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// init
+setWeeks(1, document.querySelector('.week-opt.active'));
+</script>
+</body>
+</html>

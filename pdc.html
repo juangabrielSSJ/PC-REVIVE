@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PDC Bolivia 2026 · Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link rel="stylesheet" href="style.css">
+
+
+
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="pantalla-login">
+  <div class="login-bg-text">PDC</div>
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="icono">📋</span>
+      <h1>PDC Bolivia 2026</h1>
+      <p>Generador Profesional con Inteligencia Artificial</p>
+    </div>
+    <div class="login-campo">
+      <label>🔐 Contraseña de acceso</label>
+      <input type="password" id="inp-pass" placeholder="Ingrese la contraseña" autocomplete="off">
+    </div>
+    <div class="login-campo">
+      <label>API Key de Groq (gratuita)</label>
+      <input type="password" id="inp-apikey" placeholder="gsk_..." autocomplete="off">
+    </div>
+    <button class="btn-login" onclick="intentarLogin()">Ingresar al Sistema →</button>
+    <div class="login-error" id="login-err">⚠️ Contraseña incorrecta. Intente de nuevo.</div>
+    <div class="login-nota">
+      Obtén tu API Key <strong>gratuita</strong> en <strong>console.groq.com</strong><br>
+      La API Key se usa solo durante la sesión y no se guarda.<br>
+      Sistema de uso educativo · Bolivia 2026
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+  <div id="topbar">
+    <div>
+      <h1>📋 Generador PDC Pro · Bolivia 2026</h1>
+      <p>Plan de Desarrollo Curricular · Educación Secundaria Comunitaria Productiva</p>
+    </div>
+    <div class="btnbar">
+      <button class="btn btn-dorado" onclick="generarVistaPreviaPDC()">👁 Vista Previa</button>
+      <button class="btn btn-naranja" onclick="abrirEdicion()">✏️ Editar</button>
+      <button class="btn btn-rojo" onclick="exportarPDF()">📄 PDF</button>
+      <button class="btn btn-azul" onclick="exportarWord()">📝 Word</button>
+      <button class="btn btn-gris" onclick="cerrarSesion()">🚪 Salir</button>
+    </div>
+  </div>
+
+  <div id="contenedor">
+    <!-- PANEL IZQUIERDO -->
+    <div id="panel-form">
+
+      <!-- DATOS REFERENCIALES -->
+      <div class="seccion-form">
+        <h3>📌 I. Datos Referenciales <span style="color:rgba(255,255,255,.4);font-size:10px;font-family:sans-serif">(manual)</span></h3>
+        <div class="fila2">
+          <div class="campo"><label>Distrito Educativo</label><input type="text" id="f-distrito" placeholder="Ej: Sopachuy"></div>
+          <div class="campo"><label>Unidad Educativa</label><input type="text" id="f-unidad" placeholder="Ej: 25 de Mayo" value="25 de Mayo — Sopachuy"></div>
+        </div>
+        <div class="fila2">
+          <div class="campo">
+            <label>Año de Escolaridad</label>
+            <select id="f-grado" onchange="actualizarParalelos()">
+              <option value="PRIMERO DE SECUNDARIA">1ro Secundaria</option>
+              <option value="SEGUNDO DE SECUNDARIA">2do Secundaria</option>
+              <option value="TERCERO DE SECUNDARIA">3ro Secundaria</option>
+              <option value="CUARTO DE SECUNDARIA">4to Secundaria</option>
+              <option value="QUINTO DE SECUNDARIA" selected>5to Secundaria</option>
+              <option value="SEXTO DE SECUNDARIA">6to Secundaria</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label>Paralelo</label>
+            <select id="f-paralelo" onchange="actualizarEstudiantes()">
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+            </select>
+          </div>
+        </div>
+        <div class="fila2">
+          <div class="campo">
+            <label>Trimestre</label>
+            <select id="f-trimestre">
+              <option value="PRIMERO">Primero</option>
+              <option value="SEGUNDO" selected>Segundo</option>
+              <option value="TERCERO">Tercero</option>
+            </select>
+          </div>
+          <div class="campo"><label>N° PDC</label><input type="text" id="f-nro" value="4"></div>
+        </div>
+        <div class="fila2">
+          <div class="campo"><label>Director(a)</label><input type="text" id="f-director" placeholder="Nombre y apellido"></div>
+          <div class="campo"><label>Maestro(a)</label><input type="text" id="f-maestro" placeholder="Lic. Nombre Apellido" value="Lic. Juan Gabriel Condori Cruz"></div>
+        </div>
+        <div class="fila3">
+          <div class="campo"><label>Área</label><input type="text" id="f-area" placeholder="Ej: SISTEMAS INFORMÁTICOS"></div>
+          <div class="campo"><label>Mes</label><input type="text" id="f-mes" placeholder="Ej: MAYO"></div>
+          <div class="campo"><label>Fecha</label><input type="text" id="f-fecha" placeholder="Ej: Mayo 2026"></div>
+        </div>
+        <div class="campo" style="margin-top:6px">
+  <label>👥 Estudiantes del curso <span id="badge-curso-lbl" class="badge-curso">5to A</span></label>
+  <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+    <input type="number" id="f-num-estudiantes" min="1" max="50" value="30"
+      style="width:80px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);border-radius:7px;padding:7px 10px;color:#e8e8e8;font-size:13px;font-family:sans-serif;"
+      onchange="actualizarEstudiantes()" oninput="actualizarEstudiantes()">
+    <span style="font-size:11px;color:rgba(255,255,255,.5)">cantidad de estudiantes</span>
+  </div>
+  <div id="info-estudiantes" style="font-size:10px;color:#2ecc71;margin-top:6px">✅ 30 filas vacías generadas — el docente escribe los nombres</div>
+</div>
+      </div>
+
+      <!-- OBJETIVO HOLÍSTICO DE NIVEL (manual) -->
+      <div class="seccion-form">
+        <h3>🎯 Objetivo Holístico de Nivel <span style="color:rgba(255,255,255,.4);font-size:10px;font-family:sans-serif">(manual — pegue el texto oficial)</span></h3>
+        <div class="campo">
+          <label>Objetivo Holístico de Nivel (texto fijo del área/año)</label>
+          <textarea id="f-obj-nivel" rows="5" placeholder="Fortalecemos los valores de... mediante el estudio de... desarrollando... para contribuir al Vivir Bien..."></textarea>
+        </div>
+      </div>
+
+      <!-- OBJETIVO DE APRENDIZAJE + TEMA -->
+      <div class="seccion-form">
+        <h3>📌 Objetivo de Aprendizaje <span style="color:rgba(255,255,255,.4);font-size:10px;font-family:sans-serif">(puede generarlo la IA)</span></h3>
+        <div class="campo">
+          <label>Tema Principal del Mes</label>
+          <input type="text" id="f-tema" placeholder="Ej: Programación Web II">
+        </div>
+        <div class="campo">
+          <label>Objetivo de Aprendizaje (columna de la tabla del PDC)</label>
+          <textarea id="f-objetivo" rows="5" placeholder="Analizamos... mediante... desarrollando habilidades... para..."></textarea>
+        </div>
+      </div>
+
+      <!-- SECCIÓN IA -->
+      <div class="ia-box">
+        <h3>🤖 Generación con IA (Groq)</h3>
+        <p>Ingresa los 4 temas semanales. La IA genera actividades, criterios de evaluación y adaptaciones curriculares <strong>en una sola llamada</strong>. Luego se genera automáticamente la rúbrica vinculada al PDC.</p>
+        <div class="campo">
+          <label>Descripción detallada por semana</label>
+          <textarea id="ia-descripcion" rows="8" placeholder="Describe cada semana con: tema + materiales/herramientas + producto esperado. Ejemplos:
+
+Semana 1: HTML y estructura web. Herramienta: editor de texto Notepad++. Producto: página web guardada en USB.
+Semana 2: CSS y estilos. Herramienta: navegador Chrome + inspector. Producto: portafolio digital estilizado.
+Semana 3: JavaScript básico. Herramienta: consola del navegador. Producto: script funcional comentado.
+Semana 4: Bootstrap responsivo. Herramienta: simulador móvil. Producto: sitio web subido a servidor local.
+
+O para Física:
+Semana 1: Movimiento rectilíneo. Material: cronómetro y cinta métrica. Producto: informe de laboratorio con tablas.
+Semana 2: etc."></textarea>
+        </div>
+        <div style="background:rgba(39,174,96,.08);border:1px solid rgba(39,174,96,.2);border-radius:7px;padding:10px;margin-bottom:10px;font-size:10px;color:rgba(255,255,255,.55);line-height:1.6">
+          💡 <strong>Mientras más detalle escribas, mejor resultado:</strong> especifica las herramientas (simulador, laboratorio, álbum, editor, experimento), el tipo de producto que entregarán (archivo digital, maqueta, informe, cartel, portafolio) y el método de entrega (USB, carpeta, exposición). La IA adaptará los momentos metodológicos y criterios a tu materia específica.
+        </div>
+        <div class="campo">
+          <label>Contexto regional (opcional)</label>
+          <input type="text" id="ia-contexto" value="zona rural de Bolivia, U.E. 25 de Mayo Sopachuy, enfoque comunitario productivo">
+        </div>
+        <button class="btn btn-verde" onclick="generarConIA()" id="btn-ia" style="width:100%;justify-content:center;padding:12px">
+          🤖 Generar PDC + Rúbrica con IA
+        </button>
+        <div class="ia-status" id="ia-status"></div>
+      </div>
+
+      <!-- CONTENIDOS GENERADOS -->
+      <div class="seccion-form" id="sec-contenidos" style="display:none">
+        <h3>📝 Contenidos <span style="color:rgba(255,255,255,.4);font-size:10px;font-family:sans-serif">(editable)</span></h3>
+        <div id="campos-semanas"></div>
+      </div>
+
+      <!-- ADAPTACIONES -->
+      <div class="seccion-form">
+        <h3>♿ Adaptaciones Curriculares</h3>
+        <div class="campo"><label>Metodología Adaptada</label>
+          <textarea id="f-adap-met" rows="4" placeholder="Uso de material visual, explicaciones paso a paso..."></textarea>
+        </div>
+        <div class="campo"><label>Resultados Esperados</label>
+          <textarea id="f-adap-res" rows="3" placeholder="El estudiante logra..."></textarea>
+        </div>
+        <div class="campo"><label>SER adaptado</label><textarea id="f-adap-ser" rows="2"></textarea></div>
+        <div class="campo"><label>SABER adaptado</label><textarea id="f-adap-saber" rows="2"></textarea></div>
+        <div class="campo"><label>HACER adaptado</label><textarea id="f-adap-hacer" rows="2"></textarea></div>
+      </div>
+
+      <!-- CONFIGURACIÓN EVALUACIÓN -->
+      <div class="seccion-form">
+        <h3>📊 Configuración de Evaluación</h3>
+        <div class="campo">
+          <label>Frecuencia de calificación</label>
+          <select id="rub-frecuencia">
+            <option value="semanal">Por semana (4 registros de 95 pts)</option>
+            <option value="quincenal">Cada 2 semanas (2 registros de 95 pts)</option>
+            <option value="mensual">Al mes (1 registro de 95 pts)</option>
+          </select>
+        </div>
+        <div style="background:rgba(200,165,0,.08);border:1px solid rgba(200,165,0,.2);border-radius:7px;padding:10px;margin-bottom:10px;font-size:11px;color:rgba(255,255,255,.6);line-height:1.6">
+          💡 Cada registro es independiente sobre 95 pts. El promedio lo maneja el registro grande del colegio.
+        </div>
+        <div class="fila3">
+          <div class="campo"><label>Pts SER</label><input type="number" id="rub-ser-pts" value="10"></div>
+          <div class="campo"><label>Pts SABER</label><input type="number" id="rub-saber1-pts" value="45"></div>
+          <div class="campo"><label>Pts HACER</label><input type="number" id="rub-hacer1-pts" value="40"></div>
+        </div>
+        <div style="font-size:11px;color:var(--dorado);text-align:right;margin-top:-4px;margin-bottom:8px">Total: 95 pts por registro</div>
+        <div class="campo"><label>Nombre actividad SABER</label>
+          <input type="text" id="rub-saber1-nom" placeholder="Ej: Examen, Prueba oral, Cuestionario" value="Examen"></div>
+        <div class="campo"><label>Nombre actividad HACER</label>
+          <input type="text" id="rub-hacer1-nom" placeholder="Ej: Proyecto, Informe, Portafolio, Álbum" value="Proyecto"></div>
+        <input type="hidden" id="rub-saber2-pts" value="0">
+        <input type="hidden" id="rub-hacer2-pts" value="0">
+        <input type="hidden" id="rub-hacer2-nom" value="">
+      </div>
+
+      <button class="btn btn-dorado" onclick="generarVistaPreviaPDC()" style="width:100%;justify-content:center;padding:14px;font-size:14px;margin-bottom:20px">
+        👁 Generar Vista Previa (PDC + Rúbrica)
+      </button>
+    </div>
+
+    <!-- PANEL DERECHO -->
+    <div id="panel-preview">
+      <h2 style="font-family:'Playfair Display',serif;color:#444;align-self:flex-start">📄 Vista Previa del Documento</h2>
+      <div id="pdc-preview-area">
+        <div class="placeholder-pdc">
+          <span class="icn">📋</span>
+          <h3>Vista previa del PDC</h3>
+          <p>Completa los datos del formulario y presiona<br><strong>"Vista Previa"</strong> para ver el documento generado</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL EDICIÓN ══ -->
+<div id="overlay-edicion">
+  <div class="modal-edicion">
+    <button class="modal-cierre" onclick="cerrarEdicion()">✕</button>
+    <h2>✏️ Editar PDC y Rúbrica</h2>
+    <div class="tabs-edicion" id="tabs-edicion"></div>
+    <div id="paneles-edicion"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-dorado" onclick="aplicarEdicion()" style="flex:1;justify-content:center">✅ Aplicar Cambios</button>
+      <button class="btn btn-gris" onclick="cerrarEdicion()" style="justify-content:center">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading"><div class="spinner"></div><p id="load-txt">Procesando...</p></div>
+
+<script src="app.js"></script>
+</body>
+</html>

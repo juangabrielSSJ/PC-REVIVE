@@ -51,6 +51,24 @@ function cerrarSesion(){
   document.getElementById('login-err').style.display='none';
 }
 
+
+
+function actualizarEstudiantes(){
+  const grado = document.getElementById('f-grado').value;
+  const paralelo = document.getElementById('f-paralelo').value;
+  const m = {"PRIMERO DE SECUNDARIA":"1ro","SEGUNDO DE SECUNDARIA":"2do","TERCERO DE SECUNDARIA":"3ro","CUARTO DE SECUNDARIA":"4to","QUINTO DE SECUNDARIA":"5to","SEXTO DE SECUNDARIA":"6to"};
+  const lbl = document.getElementById('badge-curso-lbl');
+  if(lbl) lbl.textContent = (m[grado]||grado) + " " + paralelo;
+  const cant = parseInt(document.getElementById('f-num-estudiantes')?.value) || 30;
+  estudiantesActuales = Array.from({length: cant}, (_,i) => '');
+  const info = document.getElementById('info-estudiantes');
+  if(info){
+    info.textContent = `✅ ${cant} filas vacías generadas — el docente escribe los nombres`;
+    info.style.color = '#2ecc71';
+  }
+}
+
+
 // ══ GENERACIÓN IA ══
 async function generarConIA(){
   const desc = document.getElementById('ia-descripcion').value.trim();

@@ -28,14 +28,13 @@
       <input type="password" id="inp-pass" placeholder="Ingrese la contraseña" autocomplete="off">
     </div>
     <div class="login-campo">
-      <label>API Key de Groq (gratuita)</label>
+      <label>INTRODUCE EL CODIGO IA QUE TE ENVIARON</label>
       <input type="password" id="inp-apikey" placeholder="gsk_..." autocomplete="off">
     </div>
     <button class="btn-login" onclick="intentarLogin()">Ingresar al Sistema →</button>
     <div class="login-error" id="login-err">⚠️ Contraseña incorrecta. Intente de nuevo.</div>
     <div class="login-nota">
-      Obtén tu API Key <strong>gratuita</strong> en <strong>console.groq.com</strong><br>
-      La API Key se usa solo durante la sesión y no se guarda.<br>
+      
       Sistema de uso educativo · Bolivia 2026
     </div>
   </div>
@@ -145,7 +144,7 @@
 
       <!-- SECCIÓN IA -->
       <div class="ia-box">
-        <h3>🤖 Generación con IA (Groq)</h3>
+        <h3>Generación con IA</h3>
         <p>Ingresa los 4 temas semanales. La IA genera actividades, criterios de evaluación y adaptaciones curriculares <strong>en una sola llamada</strong>. Luego se genera automáticamente la rúbrica vinculada al PDC.</p>
         <div class="campo">
           <label>Descripción detallada por semana</label>
@@ -168,7 +167,7 @@ Semana 2: etc."></textarea>
           <input type="text" id="ia-contexto" value="zona rural de Bolivia, U.E. 25 de Mayo Sopachuy, enfoque comunitario productivo">
         </div>
         <button class="btn btn-verde" onclick="generarConIA()" id="btn-ia" style="width:100%;justify-content:center;padding:12px">
-          🤖 Generar PDC + Rúbrica con IA
+           Generar PDC + Rúbrica con IA
         </button>
         <div class="ia-status" id="ia-status"></div>
       </div>

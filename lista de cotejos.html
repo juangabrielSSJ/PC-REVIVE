@@ -291,8 +291,6 @@ table.cotejo tr:nth-child(even) td{background:#fafafa;}
     width:100%;display:block;
   }
   .cotejo-page:last-child{page-break-after:avoid;}
-
-  /* HEADER visible y compacto */
   .cotejo-header{
     padding:6px 10px!important;
     background:#5b21b6!important;color:#fff!important;
@@ -301,11 +299,7 @@ table.cotejo tr:nth-child(even) td{background:#fafafa;}
   .cotejo-header h2{font-size:8pt!important;margin-bottom:2px!important;}
   .cotejo-header .meta{font-size:6pt!important;gap:6px!important;margin-top:3px!important;}
   .cotejo-header div[style]{font-size:6pt!important;margin-top:4px!important;}
-
-  /* leyenda compacta */
   .leyenda{padding:3px 10px!important;font-size:5.5pt!important;gap:8px!important;}
-
-  /* TABLA */
   .cotejo-table-wrap{overflow:visible!important;}
   table.cotejo{font-size:5.5pt!important;width:100%!important;table-layout:fixed;}
   table.cotejo th{
@@ -320,8 +314,6 @@ table.cotejo tr:nth-child(even) td{background:#fafafa;}
     font-size:5.5pt!important;line-height:1.2!important;
   }
   table.cotejo td.td-nombre{font-size:5.5pt!important;padding-left:4px!important;}
-
-  /* firmas */
   .firmas{padding:5px 10px 8px!important;gap:16px!important;}
   .firma-line{font-size:5.5pt!important;}
 }
@@ -631,16 +623,19 @@ function getDatos(){
   };
 }
 
-// ── GROQ ──
-async function callGroq(prompt){
+// ── GROQ — modelo actualizado + response_format json_object ──
+async function callGroq(systemPrompt, userPrompt){
   const resp=await fetch('https://api.groq.com/openai/v1/chat/completions',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+GROQ_KEY},
     body:JSON.stringify({
-      model:'llama3-8b-8192',max_tokens:900,temperature:0.35,
+      model:'llama-3.3-70b-versatile',
+      max_tokens:900,
+      temperature:0.7,
+      response_format:{type:'json_object'},
       messages:[
-        {role:'system',content:'Eres experto en educación boliviana. Responde SOLO JSON válido, sin markdown. SER=10pts, HACER=40pts, SABER=45pts.'},
-        {role:'user',content:prompt}
+        {role:'system', content: systemPrompt},
+        {role:'user',   content: userPrompt}
       ]
     })
   });
@@ -657,22 +652,52 @@ async function generarConIA(){
   btn.disabled=true; status.classList.add('show');
 
   for(let i=0;i<numSemanas;i++){
-    msg.textContent=`Semana ${i+1}: generando criterios...`;
+    msg.textContent=`Semana ${i+1} de ${numSemanas}: generando criterios...`;
     const cont=document.getElementById(`cont_${i}`)?.value||'';
     const prod=document.getElementById(`prod_${i}`)?.value||'';
     const mat=document.getElementById(`mat_${i}`)?.value||'';
     const datos=getDatos();
-    const prompt=`Materia: ${datos.materia}. Curso: ${datos.curso}. Semana ${i+1}.
-Contenido: "${cont}". Material: "${mat}". Producto: "${prod}".
-Genera 3 criterios observables y concisos para cada dimensión en una lista de cotejos.
-Responde SOLO este JSON:
-{"ser":["criterio1","criterio2","criterio3"],"hacer":["criterio1","criterio2","criterio3"],"saber":["criterio1","criterio2","criterio3"]}`;
+
+    const tieneContenido = cont.trim() || prod.trim() || mat.trim();
+    if(!tieneContenido){
+      // sin datos: mantiene criterios por defecto
+      continue;
+    }
+
+    const systemPrompt = `Eres un experto en educación boliviana con amplio conocimiento pedagógico.
+Tu tarea es generar criterios de cotejo ÚNICOS, ESPECÍFICOS, CONCRETOS y OBSERVABLES para listas de cotejos escolares.
+El sistema educativo boliviano evalúa con: SER=10pts (valores/actitudes), HACER=40pts (habilidades prácticas), SABER=45pts (conocimiento conceptual).
+IMPORTANTE: Los criterios deben basarse EXACTAMENTE en el contenido, materiales y producto indicados. Deben ser diferentes para cada semana.
+Respondes ÚNICAMENTE con JSON válido, sin texto adicional, sin explicaciones, sin markdown.`;
+
+    const userPrompt = `Genera 3 criterios de cotejo observables para la Semana ${i+1} de ${numSemanas}.
+
+DATOS DE ESTA SEMANA:
+- Materia: ${datos.materia}
+- Curso: ${datos.curso} ${datos.paralelo}
+- Contenido/Tema específico: "${cont}"
+- Materiales y recursos: "${mat}"
+- Producto que debe entregar el estudiante: "${prod}"
+
+INSTRUCCIONES OBLIGATORIAS:
+1. Criterios SER: actitudes y valores concretos al trabajar con "${cont}". Usa verbos variados: Demuestra / Respeta / Colabora / Asume / Participa / Valora.
+2. Criterios HACER: acciones prácticas observables para elaborar "${prod}" usando "${mat}".
+3. Criterios SABER: conocimientos concretos de "${cont}" que se pueden verificar.
+4. Cada criterio debe ser una oración corta (máximo 12 palabras), observable y medible.
+5. Usa vocabulario técnico propio de "${datos.materia}".
+
+Responde SOLO con este JSON sin ningún texto extra:
+{"ser":["criterio SER 1 específico","criterio SER 2 específico","criterio SER 3 específico"],"hacer":["criterio HACER 1 específico","criterio HACER 2 específico","criterio HACER 3 específico"],"saber":["criterio SABER 1 específico","criterio SABER 2 específico","criterio SABER 3 específico"]}`;
+
     try{
-      const raw=await callGroq(prompt);
-      const clean=raw.replace(/```json|```/g,'').trim();
-      criteriosData[i]=JSON.parse(clean);
+      const raw=await callGroq(systemPrompt, userPrompt);
+      const clean=raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
+      const jsonMatch = clean.match(/\{[\s\S]*\}/);
+      if(!jsonMatch) throw new Error('No JSON encontrado');
+      criteriosData[i]=JSON.parse(jsonMatch[0]);
     } catch(e){
-      // mantiene los criterios actuales
+      console.warn('Error IA semana '+(i+1)+':', e.message);
+      // mantiene criterios actuales si falla
     }
     renderCriteriosList(i);
   }
@@ -693,18 +718,14 @@ function generarOutput(){
     const prod=document.getElementById(`prod_${si}`)?.value||'';
     const crits=criteriosData[si];
 
-    // armar columnas: ser[], hacer[], saber[]
     const serCrits=crits.ser||[];
     const hacerCrits=crits.hacer||[];
     const saberCrits=crits.saber||[];
-
-    // total columnas de criterios
     const totalCrits=serCrits.length+hacerCrits.length+saberCrits.length;
 
     const page=document.createElement('div');
     page.className='cotejo-page';
 
-    // HEADER
     page.innerHTML=`
     <div class="cotejo-header">
       <h2>Lista de Cotejos · Semana ${si+1}</h2>
@@ -728,24 +749,18 @@ function generarOutput(){
       <span style="margin-left:auto;color:var(--muted);font-size:.75rem;">SER: ${serCrits.length} criterios (10pts) · HACER: ${hacerCrits.length} criterios (40pts) · SABER: ${saberCrits.length} criterios (45pts)</span>
     </div>`;
 
-    // TABLA
     const wrap=document.createElement('div');
     wrap.className='cotejo-table-wrap';
 
-    // construir encabezados
     let thead=`<thead>
       <tr>
         <th class="th-nombre" rowspan="2">N° Estudiante</th>`;
-
-    // fila 1: dimensiones agrupadas
     if(serCrits.length)   thead+=`<th class="th-ser" colspan="${serCrits.length}">SER (10 pts)</th>`;
     if(hacerCrits.length) thead+=`<th class="th-hacer" colspan="${hacerCrits.length}">HACER (40 pts)</th>`;
     if(saberCrits.length) thead+=`<th class="th-saber" colspan="${saberCrits.length}">SABER (45 pts)</th>`;
     thead+=`<th class="th-total" rowspan="2">Obs.</th>
       </tr>
       <tr>`;
-
-    // fila 2: criterios individuales
     serCrits.forEach((cr,ci)=>{
       thead+=`<th class="th-ser" style="font-weight:500;min-width:70px;max-width:100px;font-size:.62rem;white-space:normal;vertical-align:top;">S${ci+1}. ${cr.length>50?cr.slice(0,50)+'…':cr}</th>`;
     });
@@ -757,7 +772,6 @@ function generarOutput(){
     });
     thead+=`</tr></thead>`;
 
-    // filas de estudiantes
     let tbody='<tbody>';
     estudiantes.forEach((est,ei)=>{
       tbody+=`<tr><td class="td-nombre">${ei+1}. ${est}</td>`;
@@ -766,8 +780,6 @@ function generarOutput(){
       }
       tbody+=`<td style="min-width:90px;"></td></tr>`;
     });
-
-    // fila de TOTALES
     tbody+=`<tr class="totales-row">
       <td class="td-nombre" style="font-size:.75rem;">TOTALES / OBSERVACIONES</td>`;
     for(let ci=0;ci<totalCrits;ci++) tbody+=`<td></td>`;
@@ -779,7 +791,6 @@ function generarOutput(){
     wrap.appendChild(table);
     page.appendChild(wrap);
 
-    // FIRMAS
     const firmas=document.createElement('div');
     firmas.className='firmas';
     firmas.innerHTML=`
@@ -787,7 +798,6 @@ function generarOutput(){
       <div class="firma-box"><div class="firma-line">V°B° Director/a</div></div>
       <div class="firma-box"><div class="firma-line">Sello Institucional</div></div>`;
     page.appendChild(firmas);
-
     out.appendChild(page);
   }
 
@@ -811,7 +821,6 @@ function exportarExcel(){
   const estudiantes = getEstudiantes();
   const wb = XLSX.utils.book_new();
 
-  // COLORES
   const CLR = {
     headerPurple: '5B21B6', headerPurpleLight: '7C3AED',
     ser: 'B91C1C', serLight: 'FEE2E2', serMid: 'FECACA',
@@ -826,7 +835,7 @@ function exportarExcel(){
     font:{bold:true, color:{rgb: color||'000000'}, size: sz||9},
     fill:{fgColor:{rgb: bg||'FFFFFF'}},
     alignment:{horizontal:'center',vertical:'center',wrapText:true},
-    border:{top:{style:'thin',color:{rgb:'CCCCCC'}},bottom:{style:'style thin',color:{rgb:'CCCCCC'}},
+    border:{top:{style:'thin',color:{rgb:'CCCCCC'}},bottom:{style:'thin',color:{rgb:'CCCCCC'}},
             left:{style:'thin',color:{rgb:'CCCCCC'}},right:{style:'thin',color:{rgb:'CCCCCC'}}}
   });
   const cell = (v, font_color, bg, align, wrap, bold_f, sz) => ({
@@ -839,19 +848,6 @@ function exportarExcel(){
               left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}
     }
   });
-  const fmla = (f, font_color, bg, align, bold_f, sz) => ({
-    f, t:'n',
-    s:{
-      font:{bold:bold_f||false,color:{rgb:font_color||'1E1B2E'},size:sz||8},
-      fill:{fgColor:{rgb:bg||'FFFFFF'}},
-      alignment:{horizontal:align||'center',vertical:'center'},
-      border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
-              left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}
-    }
-  });
-
-  // Pesos por nivel
-  const PESOS = {Logrado:1.0, 'En Proceso':0.6, 'No Logrado':0.25};
 
   for(let si=0;si<numSemanas;si++){
     const crits = criteriosData[si];
@@ -865,7 +861,6 @@ function exportarExcel(){
     const merges = [];
     let R = 0;
 
-    // ── TÍTULO PRINCIPAL ──
     ws[XLSX.utils.encode_cell({r:R,c:0})] = {
       v:`LISTA DE COTEJOS – SEMANA ${si+1}`, t:'s',
       s:{font:{bold:true,color:{rgb:'FFFFFF'},size:13},
@@ -875,7 +870,6 @@ function exportarExcel(){
     merges.push({s:{r:R,c:0},e:{r:R,c:serC.length+hacerC.length+saberC.length+3}});
     R++;
 
-    // ── INFO INSTITUCIÓN ──
     const infoRows = [
       [`Unidad Educativa: ${datos.colegio}`, `Distrito: ${datos.distrito}`, `Municipio: ${datos.municipio}`],
       [`Docente: ${datos.docente}`, `Materia: ${datos.materia}`, `Curso: ${datos.curso} ${datos.paralelo}`],
@@ -895,7 +889,6 @@ function exportarExcel(){
       R++;
     });
 
-    // ── LEYENDA ──
     ws[XLSX.utils.encode_cell({r:R,c:0})] = {v:'LEYENDA:', t:'s', s:{font:{bold:true,size:8},fill:{fgColor:{rgb:'F3F4F6'}},alignment:{horizontal:'left',vertical:'center'}}};
     ws[XLSX.utils.encode_cell({r:R,c:1})] = {v:'✓ Logrado = 100%', t:'s', s:{font:{bold:true,color:{rgb:CLR.saber},size:8},fill:{fgColor:{rgb:CLR.logrado}},alignment:{horizontal:'center',vertical:'center'}}};
     ws[XLSX.utils.encode_cell({r:R,c:2})] = {v:'~ En Proceso = 60%', t:'s', s:{font:{bold:true,color:{rgb:'92400E'},size:8},fill:{fgColor:{rgb:CLR.proceso}},alignment:{horizontal:'center',vertical:'center'}}};
@@ -906,7 +899,6 @@ function exportarExcel(){
     merges.push({s:{r:R,c:4},e:{r:R,c:totalCols2-1}});
     R++;
 
-    // ── ENCABEZADOS FILA 1: dimensiones ──
     let col = 1;
     ws[XLSX.utils.encode_cell({r:R,c:0})] = {v:'N° Estudiante', t:'s',
       s:{font:{bold:true,color:{rgb:'FFFFFF'},size:8},fill:{fgColor:{rgb:'4C1D95'}},
@@ -937,7 +929,6 @@ function exportarExcel(){
     merges.push({s:{r:R,c:totalCols2-1},e:{r:R+1,c:totalCols2-1}});
     R++;
 
-    // ── ENCABEZADOS FILA 2: criterios individuales ──
     col = 1;
     serC.forEach((cr,ci)=>{
       ws[XLSX.utils.encode_cell({r:R,c:col})] = {v:`S${ci+1}. ${cr}`, t:'s',
@@ -945,7 +936,6 @@ function exportarExcel(){
            alignment:{horizontal:'center',vertical:'center',wrapText:true}}};
       col++;
     });
-    // columna puntaje SER y subtotal SER
     ws[XLSX.utils.encode_cell({r:R,c:col})] = {v:'Puntaje SER', t:'s',
       s:{font:{bold:true,color:{rgb:'FFFFFF'},size:7.5},fill:{fgColor:{rgb:'991B1B'}},alignment:{horizontal:'center',vertical:'center',wrapText:true}}};
     col++;
@@ -979,12 +969,7 @@ function exportarExcel(){
       s:{font:{bold:true,color:{rgb:'FFFFFF'},size:7.5},fill:{fgColor:{rgb:'166534'}},alignment:{horizontal:'center',vertical:'center',wrapText:true}}};
     R++;
 
-    // ── FILAS DE ESTUDIANTES ──
     const dataStartRow = R;
-    const OPCIONES = ['Logrado','En Proceso','No Logrado'];
-    const totalCrits = serC.length + hacerC.length + saberC.length;
-
-    // Columnas calculadas
     const serStart = 1;
     const serEnd = serStart + serC.length - 1;
     const serPtsCol = serEnd + 1;
@@ -1001,14 +986,12 @@ function exportarExcel(){
 
     estudiantes.forEach((est, ei)=>{
       const rowBg = ei%2===0 ? 'FFFFFF' : 'F9FAFB';
-      // nombre
       ws[XLSX.utils.encode_cell({r:R,c:0})] = {v:`${ei+1}. ${est}`, t:'s',
         s:{font:{bold:true,size:8},fill:{fgColor:{rgb:rowBg}},
            alignment:{horizontal:'left',vertical:'center'},
            border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
                    left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
 
-      // criterios SER - vacíos con dropdown
       serC.forEach((_,ci)=>{
         const cc = serStart+ci;
         const addr = XLSX.utils.encode_cell({r:R,c:cc});
@@ -1017,160 +1000,74 @@ function exportarExcel(){
              border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
                      left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
         if(!ws['!dataValidation']) ws['!dataValidation']=[];
-        ws['!dataValidation'].push({
-          sqref: addr,
-          type:'list',
-          formula1:'"Logrado,En Proceso,No Logrado"',
-          showDropDown:false,
-          showErrorMessage:true,
-          errorTitle:'Valor inválido',
-          error:'Selecciona: Logrado, En Proceso o No Logrado'
-        });
+        ws['!dataValidation'].push({sqref:addr,type:'list',formula1:'"Logrado,En Proceso,No Logrado"',showDropDown:false,showErrorMessage:true,errorTitle:'Valor inválido',error:'Selecciona: Logrado, En Proceso o No Logrado'});
       });
-
-      // puntaje SER = (promedio pesos) * 10
       const serRangeAddr = `${XLSX.utils.encode_col(serStart)}${R+1}:${XLSX.utils.encode_col(serEnd)}${R+1}`;
       ws[XLSX.utils.encode_cell({r:R,c:serPtsCol})] = {
         f:`IFERROR(ROUND(SUMPRODUCT(((${serRangeAddr}="Logrado")*1+(${serRangeAddr}="En Proceso")*0.6+(${serRangeAddr}="No Logrado")*0.25)*(${serRangeAddr}<>""))*10/MAX(COUNTIF(${serRangeAddr},"<>"),1),1),"")`,
-        t:'n',
-        s:{font:{bold:true,color:{rgb:CLR.ser},size:8},fill:{fgColor:{rgb:CLR.serMid}},
-           alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',
-           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
-                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+        t:'n',s:{font:{bold:true,color:{rgb:CLR.ser},size:8},fill:{fgColor:{rgb:CLR.serMid}},alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
       ws[XLSX.utils.encode_cell({r:R,c:serPctCol})] = {
         f:`IFERROR(ROUND(${XLSX.utils.encode_cell({r:R,c:serPtsCol})}/10*100,0)&"%","")`,
-        t:'s',
-        s:{font:{size:7.5,color:{rgb:CLR.ser}},fill:{fgColor:{rgb:CLR.serLight}},
-           alignment:{horizontal:'center',vertical:'center'},
-           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
-                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+        t:'s',s:{font:{size:7.5,color:{rgb:CLR.ser}},fill:{fgColor:{rgb:CLR.serLight}},alignment:{horizontal:'center',vertical:'center'},border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
 
-      // criterios HACER - vacíos con dropdown
       hacerC.forEach((_,ci)=>{
         const cc = hacerStart+ci;
         const addr = XLSX.utils.encode_cell({r:R,c:cc});
-        ws[addr] = {v:'', t:'s',
-          s:{font:{size:7.5},fill:{fgColor:{rgb:'FFFFFF'}},alignment:{horizontal:'center',vertical:'center'},
-             border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
-                     left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+        ws[addr] = {v:'', t:'s',s:{font:{size:7.5},fill:{fgColor:{rgb:'FFFFFF'}},alignment:{horizontal:'center',vertical:'center'},border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
         if(!ws['!dataValidation']) ws['!dataValidation']=[];
-        ws['!dataValidation'].push({
-          sqref: addr,
-          type:'list',
-          formula1:'"Logrado,En Proceso,No Logrado"',
-          showDropDown:false,
-          showErrorMessage:true,
-          errorTitle:'Valor inválido',
-          error:'Selecciona: Logrado, En Proceso o No Logrado'
-        });
+        ws['!dataValidation'].push({sqref:addr,type:'list',formula1:'"Logrado,En Proceso,No Logrado"',showDropDown:false,showErrorMessage:true,errorTitle:'Valor inválido',error:'Selecciona: Logrado, En Proceso o No Logrado'});
       });
       const hacerRangeAddr = `${XLSX.utils.encode_col(hacerStart)}${R+1}:${XLSX.utils.encode_col(hacerEnd)}${R+1}`;
       ws[XLSX.utils.encode_cell({r:R,c:hacerPtsCol})] = {
         f:`IFERROR(ROUND(SUMPRODUCT(((${hacerRangeAddr}="Logrado")*1+(${hacerRangeAddr}="En Proceso")*0.6+(${hacerRangeAddr}="No Logrado")*0.25)*(${hacerRangeAddr}<>""))*40/MAX(COUNTIF(${hacerRangeAddr},"<>"),1),1),"")`,
-        t:'n',
-        s:{font:{bold:true,color:{rgb:CLR.hacer},size:8},fill:{fgColor:{rgb:CLR.hacerMid}},
-           alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',
-           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
-                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+        t:'n',s:{font:{bold:true,color:{rgb:CLR.hacer},size:8},fill:{fgColor:{rgb:CLR.hacerMid}},alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
       ws[XLSX.utils.encode_cell({r:R,c:hacerPctCol})] = {
         f:`IFERROR(ROUND(${XLSX.utils.encode_cell({r:R,c:hacerPtsCol})}/40*100,0)&"%","")`,
-        t:'s',
-        s:{font:{size:7.5,color:{rgb:CLR.hacer}},fill:{fgColor:{rgb:CLR.hacerLight}},
-           alignment:{horizontal:'center',vertical:'center'},
-           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
-                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+        t:'s',s:{font:{size:7.5,color:{rgb:CLR.hacer}},fill:{fgColor:{rgb:CLR.hacerLight}},alignment:{horizontal:'center',vertical:'center'},border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
 
-      // criterios SABER - vacíos con dropdown
       saberC.forEach((_,ci)=>{
         const cc = saberStart+ci;
         const addr = XLSX.utils.encode_cell({r:R,c:cc});
-        ws[addr] = {v:'', t:'s',
-          s:{font:{size:7.5},fill:{fgColor:{rgb:'FFFFFF'}},alignment:{horizontal:'center',vertical:'center'},
-             border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
-                     left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+        ws[addr] = {v:'', t:'s',s:{font:{size:7.5},fill:{fgColor:{rgb:'FFFFFF'}},alignment:{horizontal:'center',vertical:'center'},border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
         if(!ws['!dataValidation']) ws['!dataValidation']=[];
-        ws['!dataValidation'].push({
-          sqref: addr,
-          type:'list',
-          formula1:'"Logrado,En Proceso,No Logrado"',
-          showDropDown:false,
-          showErrorMessage:true,
-          errorTitle:'Valor inválido',
-          error:'Selecciona: Logrado, En Proceso o No Logrado'
-        });
+        ws['!dataValidation'].push({sqref:addr,type:'list',formula1:'"Logrado,En Proceso,No Logrado"',showDropDown:false,showErrorMessage:true,errorTitle:'Valor inválido',error:'Selecciona: Logrado, En Proceso o No Logrado'});
       });
       const saberRangeAddr = `${XLSX.utils.encode_col(saberStart)}${R+1}:${XLSX.utils.encode_col(saberEnd)}${R+1}`;
       ws[XLSX.utils.encode_cell({r:R,c:saberPtsCol})] = {
         f:`IFERROR(ROUND(SUMPRODUCT(((${saberRangeAddr}="Logrado")*1+(${saberRangeAddr}="En Proceso")*0.6+(${saberRangeAddr}="No Logrado")*0.25)*(${saberRangeAddr}<>""))*45/MAX(COUNTIF(${saberRangeAddr},"<>"),1),1),"")`,
-        t:'n',
-        s:{font:{bold:true,color:{rgb:CLR.saber},size:8},fill:{fgColor:{rgb:CLR.saberMid}},
-           alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',
-           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
-                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+        t:'n',s:{font:{bold:true,color:{rgb:CLR.saber},size:8},fill:{fgColor:{rgb:CLR.saberMid}},alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
       ws[XLSX.utils.encode_cell({r:R,c:saberPctCol})] = {
         f:`IFERROR(ROUND(${XLSX.utils.encode_cell({r:R,c:saberPtsCol})}/45*100,0)&"%","")`,
-        t:'s',
-        s:{font:{size:7.5,color:{rgb:CLR.saber}},fill:{fgColor:{rgb:CLR.saberLight}},
-           alignment:{horizontal:'center',vertical:'center'},
-           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
-                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+        t:'s',s:{font:{size:7.5,color:{rgb:CLR.saber}},fill:{fgColor:{rgb:CLR.saberLight}},alignment:{horizontal:'center',vertical:'center'},border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
 
-      // obs
       ws[XLSX.utils.encode_cell({r:R,c:obsCol})] = {v:'', t:'s',
-        s:{fill:{fgColor:{rgb:rowBg}},
-           border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},
-                   left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
+        s:{fill:{fgColor:{rgb:rowBg}},border:{top:{style:'thin',color:{rgb:'DDDDDD'}},bottom:{style:'thin',color:{rgb:'DDDDDD'}},left:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'DDDDDD'}}}}};
       R++;
     });
 
-    // ── FILA TOTALES ──
     const dataEndRow = R - 1;
     ws[XLSX.utils.encode_cell({r:R,c:0})] = {v:'TOTALES / PROMEDIOS', t:'s',
       s:{font:{bold:true,size:8.5},fill:{fgColor:{rgb:CLR.totalesRow}},alignment:{horizontal:'center',vertical:'center'},
          border:{top:{style:'medium',color:{rgb:'5B21B6'}},bottom:{style:'medium',color:{rgb:'5B21B6'}},
                  left:{style:'medium',color:{rgb:'5B21B6'}},right:{style:'medium',color:{rgb:'5B21B6'}}}}};
 
-    // promedio puntaje SER
     const serPtsColL = XLSX.utils.encode_col(serPtsCol);
-    ws[XLSX.utils.encode_cell({r:R,c:serPtsCol})] = {
-      f:`ROUND(AVERAGE(${serPtsColL}${dataStartRow+1}:${serPtsColL}${dataEndRow+1}),1)`,
-      t:'n',
-      s:{font:{bold:true,color:{rgb:CLR.ser},size:9},fill:{fgColor:{rgb:CLR.serMid}},
-         alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',
-         border:{top:{style:'medium',color:{rgb:'5B21B6'}},bottom:{style:'medium',color:{rgb:'5B21B6'}},
-                 left:{style:'medium',color:{rgb:'5B21B6'}},right:{style:'medium',color:{rgb:'5B21B6'}}}}};
-
+    ws[XLSX.utils.encode_cell({r:R,c:serPtsCol})] = {f:`ROUND(AVERAGE(${serPtsColL}${dataStartRow+1}:${serPtsColL}${dataEndRow+1}),1)`,t:'n',s:{font:{bold:true,color:{rgb:CLR.ser},size:9},fill:{fgColor:{rgb:CLR.serMid}},alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',border:{top:{style:'medium',color:{rgb:'5B21B6'}},bottom:{style:'medium',color:{rgb:'5B21B6'}},left:{style:'medium',color:{rgb:'5B21B6'}},right:{style:'medium',color:{rgb:'5B21B6'}}}}};
     const hacerPtsColL = XLSX.utils.encode_col(hacerPtsCol);
-    ws[XLSX.utils.encode_cell({r:R,c:hacerPtsCol})] = {
-      f:`ROUND(AVERAGE(${hacerPtsColL}${dataStartRow+1}:${hacerPtsColL}${dataEndRow+1}),1)`,
-      t:'n',
-      s:{font:{bold:true,color:{rgb:CLR.hacer},size:9},fill:{fgColor:{rgb:CLR.hacerMid}},
-         alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',
-         border:{top:{style:'medium',color:{rgb:'5B21B6'}},bottom:{style:'medium',color:{rgb:'5B21B6'}},
-                 left:{style:'medium',color:{rgb:'5B21B6'}},right:{style:'medium',color:{rgb:'5B21B6'}}}}};
-
+    ws[XLSX.utils.encode_cell({r:R,c:hacerPtsCol})] = {f:`ROUND(AVERAGE(${hacerPtsColL}${dataStartRow+1}:${hacerPtsColL}${dataEndRow+1}),1)`,t:'n',s:{font:{bold:true,color:{rgb:CLR.hacer},size:9},fill:{fgColor:{rgb:CLR.hacerMid}},alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',border:{top:{style:'medium',color:{rgb:'5B21B6'}},bottom:{style:'medium',color:{rgb:'5B21B6'}},left:{style:'medium',color:{rgb:'5B21B6'}},right:{style:'medium',color:{rgb:'5B21B6'}}}}};
     const saberPtsColL = XLSX.utils.encode_col(saberPtsCol);
-    ws[XLSX.utils.encode_cell({r:R,c:saberPtsCol})] = {
-      f:`ROUND(AVERAGE(${saberPtsColL}${dataStartRow+1}:${saberPtsColL}${dataEndRow+1}),1)`,
-      t:'n',
-      s:{font:{bold:true,color:{rgb:CLR.saber},size:9},fill:{fgColor:{rgb:CLR.saberMid}},
-         alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',
-         border:{top:{style:'medium',color:{rgb:'5B21B6'}},bottom:{style:'medium',color:{rgb:'5B21B6'}},
-                 left:{style:'medium',color:{rgb:'5B21B6'}},right:{style:'medium',color:{rgb:'5B21B6'}}}}};
-    // rellenar resto de totales
+    ws[XLSX.utils.encode_cell({r:R,c:saberPtsCol})] = {f:`ROUND(AVERAGE(${saberPtsColL}${dataStartRow+1}:${saberPtsColL}${dataEndRow+1}),1)`,t:'n',s:{font:{bold:true,color:{rgb:CLR.saber},size:9},fill:{fgColor:{rgb:CLR.saberMid}},alignment:{horizontal:'center',vertical:'center'},numFmt:'0.0',border:{top:{style:'medium',color:{rgb:'5B21B6'}},bottom:{style:'medium',color:{rgb:'5B21B6'}},left:{style:'medium',color:{rgb:'5B21B6'}},right:{style:'medium',color:{rgb:'5B21B6'}}}}};
+
     for(let c2=1;c2<=obsCol;c2++){
       if(![serPtsCol,serPctCol,hacerPtsCol,hacerPctCol,saberPtsCol,saberPctCol].includes(c2)){
         if(!ws[XLSX.utils.encode_cell({r:R,c:c2})]){
           ws[XLSX.utils.encode_cell({r:R,c:c2})] = {v:'', t:'s',
-            s:{fill:{fgColor:{rgb:CLR.totalesRow}},
-               border:{top:{style:'medium',color:{rgb:'5B21B6'}},bottom:{style:'medium',color:{rgb:'5B21B6'}},
-                       left:{style:'medium',color:{rgb:'5B21B6'}},right:{style:'medium',color:{rgb:'5B21B6'}}}}};
+            s:{fill:{fgColor:{rgb:CLR.totalesRow}},border:{top:{style:'medium',color:{rgb:'5B21B6'}},bottom:{style:'medium',color:{rgb:'5B21B6'}},left:{style:'medium',color:{rgb:'5B21B6'}},right:{style:'medium',color:{rgb:'5B21B6'}}}}};
         }
       }
     }
     R++;
 
-    // ── FIRMAS ──
     R++;
     ['Firma del Docente: '+datos.docente, "V°B° Director/a", "Sello Institucional"].forEach((txt,fi)=>{
       const cc = fi * Math.floor(obsCol/3);
@@ -1180,10 +1077,9 @@ function exportarExcel(){
       merges.push({s:{r:R+1,c:cc},e:{r:R+1,c:cc+Math.floor(obsCol/3)-1}});
     });
 
-    // ── TAMAÑOS DE COLUMNA ──
-    const colWidths = [{wch:22}]; // nombre
+    const colWidths = [{wch:22}];
     serC.forEach(()=>colWidths.push({wch:12}));
-    colWidths.push({wch:11},{wch:8}); // pts, %
+    colWidths.push({wch:11},{wch:8});
     hacerC.forEach(()=>colWidths.push({wch:12}));
     colWidths.push({wch:12},{wch:8});
     saberC.forEach(()=>colWidths.push({wch:12}));
@@ -1192,8 +1088,6 @@ function exportarExcel(){
     ws['!cols'] = colWidths;
     ws['!merges'] = merges;
     ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:R+2,c:obsCol}});
-
-    // Configurar impresión horizontal
     ws['!pageSetup'] = {orientation:'landscape',paperSize:1,fitToPage:true,fitToWidth:1,fitToHeight:0};
     ws['!printOptions'] = {gridLines:false};
     ws['!margins'] = {left:0.3,right:0.3,top:0.3,bottom:0.3,header:0.1,footer:0.1};
@@ -1201,29 +1095,22 @@ function exportarExcel(){
     XLSX.utils.book_append_sheet(wb, ws, `Semana ${si+1}`);
   }
 
-  // Instrucciones
   const wsInfo = {};
   const instrLines = [
-    ['📋 INSTRUCCIONES DE USO'],
-    [''],
+    ['📋 INSTRUCCIONES DE USO'],[''],
     ['1. En cada celda de criterio, cambia el valor a:'],
     ['   • Logrado    → el estudiante alcanzó el criterio al 100%'],
     ['   • En Proceso → lo alcanzó parcialmente (60%)'],
-    ['   • No Logrado → no alcanzó el criterio (25%)'],
-    [''],
+    ['   • No Logrado → no alcanzó el criterio (25%)'],[''],
     ['2. Las columnas "Puntaje" calculan automáticamente la nota proporcional:'],
-    ['   • SER: máximo 10 puntos'],
-    ['   • HACER: máximo 40 puntos'],
-    ['   • SABER: máximo 45 puntos'],
-    ['   • TOTAL: máximo 95 puntos (escala boliviana)'],
-    [''],
-    ['3. Para imprimir: Archivo → Imprimir → Horizontal → Ajustar a 1 página de ancho'],
-    [''],
+    ['   • SER: máximo 10 puntos'],['   • HACER: máximo 40 puntos'],
+    ['   • SABER: máximo 45 puntos'],['   • TOTAL: máximo 95 puntos (escala boliviana)'],[''],
+    ['3. Para imprimir: Archivo → Imprimir → Horizontal → Ajustar a 1 página de ancho'],[''],
     ['Generado por PC REVIVE · Tel. 74412748'],
   ];
   instrLines.forEach((row,ri)=>{
     wsInfo[XLSX.utils.encode_cell({r:ri,c:0})] = {v:row[0]||'', t:'s',
-      s:{font:{bold:ri===0,size:ri===0?12:9, color:{rgb:ri===0?'5B21B6':'1E1B2E'}},
+      s:{font:{bold:ri===0,size:ri===0?12:9,color:{rgb:ri===0?'5B21B6':'1E1B2E'}},
          alignment:{horizontal:'left',vertical:'center'}}};
   });
   wsInfo['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:instrLines.length,c:0}});

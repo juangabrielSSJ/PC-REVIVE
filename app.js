@@ -92,7 +92,7 @@ async function generarConIA(){
   const hacer2Nom = getValue('rub-hacer2-nom')||'Actividad 2';
 
   const objNivelVal = getValue('f-obj-nivel') || '(no proporcionado)';
-  const prompt = `Eres un maestro boliviano experto en planificación curricular del Sistema Educativo Plurinacional (Ley 070). Genera un PDC completo para nivel secundario boliviano.
+  const prompt = `Eres un maestro boliviano experto en planificación de desarrollo curricular del Sistema Educativo Plurinacional (Ley 070). Genera un PDC completo para nivel secundario boliviano.
 
 DATOS DEL PDC:
 - Área: ${area} | Año: ${grado} | Tema del mes: ${tema}
@@ -754,10 +754,11 @@ function buildPDCInner(d){
         </td>
       </tr></tbody>
     </table>
-    <div class="firmas">
-      <div class="firma-b"><div class="firma-l"></div><div class="firma-t">Firma y sello del docente</div></div>
-      <div class="firma-b"><div class="firma-l"></div><div class="firma-t">Firma y sello del director (a)</div></div>
-    </div>`;
+       <div style="height:40px"></div>
+<div class="firmas">
+  <div class="firma-b"><div class="firma-l"></div><div class="firma-t">Firma y sello del docente</div></div>
+  <div class="firma-b"><div class="firma-l"></div><div class="firma-t">Firma y sello del director (a)</div></div>
+</div>`;
 }
 
 function buildRubricaInner(d){
@@ -872,10 +873,11 @@ function buildRubricaInner(d){
       </tr></thead>
       <tbody>${rubFilas}</tbody>
     </table>
-    <div class="firmas">
-      <div class="firma-b"><div class="firma-l"></div><div class="firma-t">Firma y sello del docente</div></div>
-      <div class="firma-b"><div class="firma-l"></div><div class="firma-t">Firma y sello del director (a)</div></div>
-    </div>`;
+    <div style="height:40px"></div>
+<div class="firmas">
+  <div class="firma-b"><div class="firma-l"></div><div class="firma-t">Firma y sello del docente</div></div>
+  <div class="firma-b"><div class="firma-l"></div><div class="firma-t">Firma y sello del director (a)</div></div>
+</div>`;
 }
 
 // ══ VISTA PREVIA — iframes escalados que simulan hojas carta reales ══
@@ -933,6 +935,41 @@ function generarVistaPreviaPDC(){
 
 
 // ══ EXPORT PDF ══
+// ══ BUSCAR CORTE LIMPIO ══
+// Busca el mejor punto de corte escaneando hacia arriba desde el límite.
+// En lugar de exigir fila completamente blanca (falla con celdas coloreadas),
+// busca la fila con MENOS píxeles oscuros (espacios entre líneas de texto).
+function buscarCorteLimpio(canvas, desdeYpx, rangoScan) {
+  const ctx = canvas.getContext('2d');
+  const w   = canvas.width;
+  // Ignorar los primeros y últimos 15% del ancho (bordes de celda con color)
+  const xIni = Math.floor(w * 0.15);
+  const xFin = Math.floor(w * 0.85);
+  const ancho = xFin - xIni;
+
+  let mejorY      = desdeYpx;
+  let mejorOscuros = Infinity;
+
+  const inicio = Math.max(0, desdeYpx - rangoScan);
+  for (let y = desdeYpx; y >= inicio; y--) {
+    const data = ctx.getImageData(xIni, y, ancho, 1).data;
+    let oscuros = 0;
+    for (let x = 0; x < data.length; x += 4) {
+      const r = data[x], g = data[x+1], b = data[x+2];
+      // Píxel considerado "oscuro" si no es casi blanco
+      if (r < 220 || g < 220 || b < 220) oscuros++;
+    }
+    if (oscuros < mejorOscuros) {
+      mejorOscuros = oscuros;
+      mejorY = y;
+      // Si encontramos fila con 0 oscuros → corte perfecto, parar
+      if (oscuros === 0) break;
+    }
+  }
+  return mejorY;
+}
+
+// ══ EXPORT PDF ══
 async function exportarPDF() {
   if (!document.getElementById('pdc-doc')) {
     alert('Genera la vista previa primero.');
@@ -957,7 +994,6 @@ async function exportarPDF() {
     let primeraPagina = true;
 
     for (const hoja of hojas) {
-      // Guardar transform original y quitarlo para capturar en tamaño real
       const origTransform = hoja.style.transform;
       const origWidth     = hoja.style.width;
       const origMargin    = hoja.style.marginBottom;
@@ -976,7 +1012,6 @@ async function exportarPDF() {
         windowWidth: targetWidthPx,
       });
 
-      // Restaurar
       hoja.style.transform    = origTransform;
       hoja.style.width        = origWidth;
       hoja.style.marginBottom = origMargin;
@@ -985,26 +1020,41 @@ async function exportarPDF() {
       const altoPaginaPx = Math.floor(contentH * pxPorMm);
 
       let yPx = 0;
+
       while (yPx < canvas.height) {
-        const sliceHpx = Math.min(altoPaginaPx, canvas.height - yPx);
+        const espacioRestante = canvas.height - yPx;
+        let sliceHpx;
+
+        if (espacioRestante <= altoPaginaPx) {
+          sliceHpx = espacioRestante;
+        } else {
+          // Buscar el mejor punto de corte en los últimos 120px del límite
+          const limitePx = yPx + altoPaginaPx;
+          const cortePx  = buscarCorteLimpio(canvas, limitePx, 120);
+          sliceHpx = cortePx - yPx;
+          if (sliceHpx <= 20) sliceHpx = altoPaginaPx; // seguridad
+        }
+
         const tc  = document.createElement('canvas');
         tc.width  = canvas.width;
         tc.height = sliceHpx;
-        const ctx = tc.getContext('2d');
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, tc.width, tc.height);
-        ctx.drawImage(canvas, 0, yPx, canvas.width, sliceHpx, 0, 0, canvas.width, sliceHpx);
+        const tctx = tc.getContext('2d');
+        tctx.fillStyle = '#ffffff';
+        tctx.fillRect(0, 0, tc.width, tc.height);
+        tctx.drawImage(canvas, 0, yPx, canvas.width, sliceHpx, 0, 0, canvas.width, sliceHpx);
+
         const sliceHmm = sliceHpx / pxPorMm;
+
         if (!primeraPagina) pdf.addPage();
         primeraPagina = false;
+
         pdf.addImage(
           tc.toDataURL('image/jpeg', 0.95),
           'JPEG',
-          margin,
-          margin,
-          contentW,
-          sliceHmm
+          margin, margin,
+          contentW, sliceHmm
         );
+
         yPx += sliceHpx;
       }
     }
@@ -1017,6 +1067,9 @@ async function exportarPDF() {
     ocultarLoading();
   }
 }
+
+
+
 
 // ══ EXPORT WORD ══
 async function exportarWord(){

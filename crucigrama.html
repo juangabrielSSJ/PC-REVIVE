@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Generador de Crucigramas IA – PC REVIVE</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#f3f1fc;
+  --surface:#ffffff;
+  --purple:#5b3ec8;
+  --purple2:#7c5cf0;
+  --purple-light:#ece7fb;
+  --purple-mid:#cfc2f7;
+  --accent:#f59e0b;
+  --ink:#241b3a;
+  --text:#231a35;
+  --muted:#6b6280;
+  --border:#ddd4f6;
+  --shadow:0 8px 32px rgba(91,62,200,0.10);
+  --radius:16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── OVERLAY CONTRASEÑA ── */
+#lockScreen{
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(135deg,#1a1130 0%,#5b3ec8 50%,#1a1130 100%);
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:0;
+}
+.lock-card{
+  background:rgba(255,255,255,0.07);
+  border:1.5px solid rgba(255,255,255,0.18);
+  border-radius:24px;
+  padding:48px 40px;
+  width:min(420px,90vw);
+  backdrop-filter:blur(18px);
+  display:flex;flex-direction:column;gap:20px;
+  box-shadow:0 24px 64px rgba(0,0,0,0.4);
+}
+.lock-logo{
+  font-family:'DM Serif Display',serif;
+  font-size:2rem;color:#fff;text-align:center;
+  text-shadow:0 2px 12px rgba(0,0,0,0.3);
+}
+.lock-sub{font-size:.85rem;color:rgba(255,255,255,0.6);text-align:center;}
+.lock-label{font-size:.78rem;font-weight:700;color:rgba(255,255,255,0.7);letter-spacing:1.5px;text-transform:uppercase;}
+.lock-input{
+  width:100%;padding:13px 16px;
+  background:rgba(255,255,255,0.12);
+  border:1.5px solid rgba(255,255,255,0.25);
+  border-radius:10px;color:#fff;font-size:.95rem;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  outline:none;transition:border .2s;
+}
+.lock-input::placeholder{color:rgba(255,255,255,0.35);}
+.lock-input:focus{border-color:var(--purple2);}
+.lock-btn{
+  width:100%;padding:14px;
+  background:var(--purple2);border:none;border-radius:10px;
+  color:#fff;font-weight:800;font-size:1rem;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  cursor:pointer;transition:background .2s,transform .15s;
+}
+.lock-btn:hover{background:#6b4be0;transform:translateY(-2px);}
+.lock-err{color:#ff6b6b;font-size:.85rem;text-align:center;min-height:20px;}
+
+/* ── MAIN APP ── */
+#app{display:none;}
+
+.top-bar{
+  background:linear-gradient(90deg,var(--purple) 0%,var(--purple2) 100%);
+  padding:18px 32px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 4px 18px rgba(91,62,200,0.18);
+}
+.top-bar-title{
+  font-family:'DM Serif Display',serif;
+  font-size:1.5rem;color:#fff;letter-spacing:-.5px;
+}
+.top-bar-sub{font-size:.78rem;color:rgba(255,255,255,.7);margin-top:2px;}
+.logout-btn{
+  background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);
+  color:#fff;padding:7px 18px;border-radius:999px;
+  font-size:.8rem;font-weight:700;cursor:pointer;
+  font-family:'Plus Jakarta Sans',sans-serif;transition:background .2s;
+}
+.logout-btn:hover{background:rgba(255,255,255,.25);}
+
+.container{max-width:1100px;margin:0 auto;padding:32px 20px 60px;}
+
+.card{
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:var(--radius);padding:28px 32px;
+  box-shadow:var(--shadow);margin-bottom:24px;
+}
+.card-title{
+  font-family:'DM Serif Display',serif;
+  font-size:1.25rem;color:var(--purple);
+  margin-bottom:20px;display:flex;align-items:center;gap:10px;
+}
+.card-title span{font-size:1.4rem;}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;}
+@media(max-width:640px){
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}
+}
+
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:.76rem;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.field input,.field select,.field textarea{
+  padding:11px 14px;border:1.5px solid var(--border);
+  border-radius:10px;font-size:.92rem;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  background:var(--bg);color:var(--text);outline:none;
+  transition:border .2s,box-shadow .2s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--purple2);
+  box-shadow:0 0 0 3px rgba(124,92,240,.14);
+}
+.field textarea{resize:vertical;min-height:90px;font-family:'Courier New',monospace;font-size:.85rem;}
+.field .hint{font-size:.74rem;color:var(--muted);margin-top:2px;}
+
+/* botones */
+.btn-primary{
+  padding:13px 30px;background:var(--purple);color:#fff;
+  border:none;border-radius:12px;font-weight:800;font-size:.95rem;
+  font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;
+  transition:background .2s,transform .15s;display:inline-flex;align-items:center;gap:8px;
+}
+.btn-primary:hover{background:#432e96;transform:translateY(-2px);}
+.btn-ai{
+  padding:13px 30px;background:linear-gradient(90deg,#7c3aed,#4f46e5);color:#fff;
+  border:none;border-radius:12px;font-weight:800;font-size:.95rem;
+  font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;
+  transition:opacity .2s,transform .15s;display:inline-flex;align-items:center;gap:8px;
+}
+.btn-ai:hover{opacity:.88;transform:translateY(-2px);}
+.btn-ai:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.btn-print{
+  padding:13px 30px;background:var(--accent);color:#fff;
+  border:none;border-radius:12px;font-weight:800;font-size:.95rem;
+  font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;
+  transition:background .2s,transform .15s;display:inline-flex;align-items:center;gap:8px;
+}
+.btn-print:hover{background:#d48806;transform:translateY(-2px);}
+.btn-print2{
+  padding:13px 30px;background:#0e7490;color:#fff;
+  border:none;border-radius:12px;font-weight:800;font-size:.95rem;
+  font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;
+  transition:background .2s,transform .15s;display:inline-flex;align-items:center;gap:8px;
+}
+.btn-print2:hover{background:#0b5c70;transform:translateY(-2px);}
+.btn-excel{
+  padding:13px 28px;background:#217346;color:#fff;
+  border:none;border-radius:12px;font-weight:800;font-size:.95rem;
+  font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;
+  transition:background .2s,transform .15s;display:inline-flex;align-items:center;gap:8px;
+}
+.btn-excel:hover{background:#185c38;transform:translateY(-2px);}
+
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;}
+
+.ai-status{
+  padding:12px 20px;border-radius:10px;font-size:.88rem;font-weight:600;
+  background:var(--purple-light);color:var(--purple);border:1.5px solid var(--purple-mid);
+  display:none;align-items:center;gap:8px;margin-top:14px;
+}
+.ai-status.show{display:flex;}
+.spinner{
+  width:16px;height:16px;border:2.5px solid var(--purple-mid);
+  border-top-color:var(--purple2);border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.toggle-row{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+.toggle-row label{font-size:.85rem;font-weight:600;color:var(--muted);cursor:pointer;}
+.toggle-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--purple2);cursor:pointer;}
+
+/* ── OUTPUT ── */
+#crucigramaOutput{display:none;}
+.cw-page{
+  background:#fff;border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden;margin-bottom:28px;
+}
+.cw-header{
+  background:linear-gradient(90deg,var(--purple) 0%,var(--purple2) 100%);
+  padding:20px 28px;color:#fff;
+}
+.cw-header h2{font-family:'DM Serif Display',serif;font-size:1.4rem;margin-bottom:4px;}
+.cw-header .meta{font-size:.82rem;opacity:.85;display:flex;flex-wrap:wrap;gap:16px;margin-top:8px;}
+
+.cw-body{padding:26px 28px;display:flex;gap:36px;flex-wrap:wrap;align-items:flex-start;}
+
+.crossword-grid{
+  display:grid;
+  border:2px solid var(--ink);
+  width:max-content;
+  background:var(--ink);
+  gap:1px;
+}
+.cw-cell{
+  position:relative;width:30px;height:30px;
+  background:#fff;display:flex;align-items:center;justify-content:center;
+}
+.cw-cell.cw-blocked{background:var(--ink);}
+.cw-num{
+  position:absolute;top:1px;left:2px;font-size:7px;font-weight:800;color:#777;line-height:1;
+}
+.cw-letter{
+  font-weight:800;font-size:14px;color:var(--ink);
+}
+body.cw-modo-vacio .cw-letter{visibility:hidden;}
+
+.cw-clues{flex:1;min-width:240px;display:flex;gap:28px;flex-wrap:wrap;}
+.cw-clue-col{flex:1;min-width:200px;}
+.cw-clue-col h4{
+  font-family:'DM Serif Display',serif;color:var(--purple);
+  font-size:1rem;margin-bottom:10px;border-bottom:2px solid var(--purple-mid);padding-bottom:6px;
+}
+.cw-clue-item{font-size:.85rem;margin-bottom:8px;line-height:1.4;color:var(--text);}
+.cw-clue-item b{color:var(--purple);margin-right:4px;}
+
+@media(max-width:760px){
+  .cw-body{flex-direction:column;}
+}
+
+/* print */
+@media print{
+  @page{size:letter landscape;margin:8mm;}
+  #lockScreen,#app .top-bar,.card,.actions,.ai-status,
+  #finalActions{display:none!important;}
+  #crucigramaOutput{display:block!important;}
+  body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .container{padding:0!important;max-width:100%!important;}
+  .cw-page{box-shadow:none!important;border:1px solid #999!important;}
+  .cw-header{
+    background:var(--purple)!important;color:#fff!important;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .cw-cell{width:26px;height:26px;}
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     PANTALLA DE CONTRASEÑA
+═══════════════════════════════════════════ -->
+<div id="lockScreen">
+  <div class="lock-card">
+    <div class="lock-logo"> PC REVIVE<br/><small style="font-size:.9rem;font-family:'Plus Jakarta Sans',sans-serif;font-weight:400;opacity:.7">Generador de Crucigramas</small></div>
+    <div class="lock-sub">Acceso docente — Bolivia 2026</div>
+
+    <div class="field">
+      <label class="lock-label">Contraseña de acceso</label>
+      <input class="lock-input" type="password" id="pass1" placeholder="Contraseña del sistema"/>
+    </div>
+
+    <div class="field">
+      <label class="lock-label">INTRODUCE LA CLAVE QUE TE ENVIARON</label>
+      <input class="lock-input" type="password" id="pass2" placeholder="gsk_xxxxxxxxxxxxxxxxxxxx"/>
+    </div>
+
+    <div class="lock-err" id="lockErr"></div>
+    <button class="lock-btn" onclick="unlock()">Ingresar →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     APP PRINCIPAL
+═══════════════════════════════════════════ -->
+<div id="app">
+
+  <div class="top-bar">
+    <div>
+      <div class="top-bar-title">Generador de Crucigramas</div>
+      <div class="top-bar-sub">PC REVIVE · Sistema Educativo Bolivia · Crucigramas autogenerados por IA</div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Salir</button>
+  </div>
+
+  <div class="container">
+
+    <!-- ── DATOS GENERALES ── -->
+    <div class="card">
+      <div class="card-title"><span></span> Datos de la Institución</div>
+      <div class="grid-3" style="margin-bottom:16px;">
+        <div class="field"><label>Unidad Educativa</label><input type="text" id="colegio" placeholder="Nombre del colegio"/></div>
+        <div class="field"><label>Docente</label><input type="text" id="docente" placeholder="Nombre completo"/></div>
+        <div class="field"><label>Área / Materia</label><input type="text" id="materia" placeholder="Ej: Ciencias Naturales"/></div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Curso</label>
+          <select id="curso">
+            <option value="">— Seleccionar —</option>
+            <optgroup label="Primaria">
+              <option>1ro Primaria</option><option>2do Primaria</option><option>3ro Primaria</option>
+              <option>4to Primaria</option><option>5to Primaria</option><option>6to Primaria</option>
+            </optgroup>
+            <optgroup label="Secundaria">
+              <option>1ro Secundaria</option><option>2do Secundaria</option><option>3ro Secundaria</option>
+              <option>4to Secundaria</option><option>5to Secundaria</option><option>6to Secundaria</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="field"><label>Paralelo</label><input type="text" id="paralelo" placeholder="Ej: A"/></div>
+      </div>
+    </div>
+
+    <!-- ── CONFIGURACIÓN DEL CRUCIGRAMA ── -->
+    <div class="card">
+      <div class="card-title"><span></span> Configuración del Crucigrama</div>
+      <div class="grid-3" style="margin-bottom:16px;">
+        <div class="field" style="grid-column:span 1;">
+          <label>Tema específico</label>
+          <input type="text" id="tema" placeholder="Ej: El sistema solar, Las fracciones, La célula..."/>
+        </div>
+        <div class="field">
+          <label>Cantidad de palabras</label>
+          <select id="cantidad">
+            <option value="6">6 palabras</option>
+            <option value="8" selected>8 palabras</option>
+            <option value="10">10 palabras</option>
+            <option value="12">12 palabras</option>
+            <option value="15">15 palabras</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Dificultad</label>
+          <select id="dificultad">
+            <option value="facil">Fácil (palabras cortas)</option>
+            <option value="media" selected>Media</option>
+            <option value="dificil">Difícil (palabras largas)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Indicaciones adicionales (opcional)</label>
+        <input type="text" id="indicaciones" placeholder="Ej: enfocarse solo en los planetas internos, usar vocabulario de 5to grado..."/>
+      </div>
+    </div>
+
+    <!-- ── PALABRAS MANUALES (para "Generar sin IA") ── -->
+    <div class="card">
+      <div class="card-title"><span></span> Palabras y Pistas Manuales <small style="font-size:.7rem;color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0;">(opcional, solo para "Generar sin IA")</small></div>
+      <div class="field">
+        <label>Una palabra y su pista por línea</label>
+        <textarea id="palabrasManuales" placeholder="PLANETA: Cuerpo celeste que orbita una estrella&#10;SOL: Estrella central del sistema solar&#10;LUNA: Satélite natural de la Tierra"></textarea>
+        <div class="hint">Formato: PALABRA: pista — una por línea. Si lo dejas vacío, se usará un banco de palabras genérico.</div>
+      </div>
+    </div>
+
+    <!-- ── IA ── -->
+    <div class="card">
+      <div class="card-title"><span></span> Generación con IA </div>
+      <p style="font-size:.87rem;color:var(--muted);margin-bottom:16px;">
+        La IA leerá el tema ingresado y generará automáticamente palabras clave junto con sus pistas, listas para armar el crucigrama.
+      </p>
+      <div class="actions">
+        <button class="btn-ai" id="btnIA" onclick="generarConIA()">✨ Generar Crucigrama con IA</button>
+        <button class="btn-primary" onclick="generarManual()">📋 Generar sin IA</button>
+      </div>
+      <div class="ai-status" id="aiStatus">
+        <div class="spinner"></div>
+        <span id="aiStatusMsg">Consultando IA, por favor espera...</span>
+      </div>
+    </div>
+
+    <!-- ── OUTPUT ── -->
+    <div id="crucigramaOutput"></div>
+
+    <!-- acciones finales -->
+    <div id="finalActions" style="display:none;" class="actions">
+      <div class="toggle-row" style="width:100%;">
+        <input type="checkbox" id="chkRespuestas" onchange="toggleRespuestas()"/>
+        <label for="chkRespuestas">Mostrar respuestas en pantalla</label>
+      </div>
+      <button class="btn-print" onclick="imprimirVacio()">🖨️ Imprimir crucigrama (vacío)</button>
+      <button class="btn-print2" onclick="imprimirConRespuestas()">🖨️ Imprimir con respuestas</button>
+      <button class="btn-excel" onclick="exportarExcelCrucigrama()">📊 Exportar palabras a Excel</button>
+      <button class="btn-primary" onclick="resetForm()">🔄 Nuevo Crucigrama</button>
+    </div>
+
+  </div><!-- /container -->
+</div><!-- /app -->
+
+<script>
+let GROQ_KEY = '';
+let crucigramaActual = null;   // resultado de generarCrucigrama()
+let temaActual = '';
+
+// ════════════════════════════════════════════
+//  LOCK
+// ════════════════════════════════════════════
+function unlock(){
+  const p1  = document.getElementById('pass1').value.trim();
+  const p2  = document.getElementById('pass2').value.trim();
+  const err = document.getElementById('lockErr');
+
+  const hashIngresado = btoa(p1 + 'pdc_salt_2026');
+  if(btoa('pdc2026' + 'pdc_salt_2026') !== hashIngresado){
+    err.textContent = 'Contraseña incorrecta.';
+    return;
+  }
+  if(p2.length < 20){
+    err.textContent = 'Ingresa una clave API de Groq válida.';
+    return;
+  }
+  GROQ_KEY = p2;
+  err.textContent = '';
+  document.getElementById('lockScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+
+function logout(){
+  GROQ_KEY = '';
+  document.getElementById('lockScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('pass1').value = '';
+  document.getElementById('pass2').value = '';
+}
+
+document.addEventListener('keydown', e=>{ if(e.key==='Enter' && document.getElementById('lockScreen').style.display!=='none') unlock(); });
+
+// ════════════════════════════════════════════
+//  UTILIDADES
+// ════════════════════════════════════════════
+function esc(s){
+  return (s===undefined||s===null?'':s.toString())
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function getDatos(){
+  return {
+    colegio:document.getElementById('colegio').value||'U.E. sin nombre',
+    docente:document.getElementById('docente').value||'',
+    materia:document.getElementById('materia').value||'',
+    curso:document.getElementById('curso').value||'',
+    paralelo:document.getElementById('paralelo').value||'',
+  };
+}
+
+// ════════════════════════════════════════════
+//  GROQ API
+// ════════════════════════════════════════════
+async function callGroq(systemPrompt, userPrompt){
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'Authorization':'Bearer '+GROQ_KEY
+    },
+    body:JSON.stringify({
+      model:'llama-3.3-70b-versatile',
+      max_tokens:2000,
+      temperature:0.8,
+      response_format:{type:'json_object'},
+      messages:[
+        {role:'system', content: systemPrompt},
+        {role:'user',   content: userPrompt}
+      ]
+    })
+  });
+  if(!resp.ok) throw new Error('Error Groq: '+resp.status);
+  const data=await resp.json();
+  return data.choices[0].message.content;
+}
+
+function rangoDificultad(d){
+  if(d==='facil') return '3 a 6 letras';
+  if(d==='dificil') return '6 a 12 letras';
+  return '4 a 8 letras';
+}
+
+// ════════════════════════════════════════════
+//  GENERAR CON IA
+// ════════════════════════════════════════════
+async function generarConIA(){
+  const tema = document.getElementById('tema').value.trim();
+  if(!tema){
+    alert('Por favor ingresa un tema específico para el crucigrama.');
+    return;
+  }
+  const datos = getDatos();
+  const cantidad = document.getElementById('cantidad').value;
+  const dificultad = document.getElementById('dificultad').value;
+  const indicaciones = document.getElementById('indicaciones').value.trim();
+  const btn = document.getElementById('btnIA');
+  const status = document.getElementById('aiStatus');
+  const msg = document.getElementById('aiStatusMsg');
+
+  btn.disabled = true;
+  status.classList.add('show');
+  msg.textContent = 'Generando palabras y pistas con IA...';
+
+  const systemPrompt = `Eres un experto en educación boliviana especializado en crear crucigramas didácticos.
+Generas palabras clave y pistas claras relacionadas ESTRICTAMENTE con el tema indicado, apropiadas para el nivel educativo del estudiante.
+REGLAS PARA LAS PALABRAS:
+- Cada palabra debe ser UNA SOLA PALABRA (sin espacios), en español, en MAYÚSCULAS.
+- No repitas palabras y que todas sean distintas entre sí.
+- Las pistas deben ser definiciones o descripciones claras que NO contengan la palabra a adivinar ni ninguna variante de ella.
+- Las pistas deben tener entre 5 y 16 palabras.
+Respondes ÚNICAMENTE con JSON válido, sin texto adicional, sin explicaciones, sin markdown.`;
+
+  const userPrompt = `Genera exactamente ${cantidad} palabras clave con sus pistas para un crucigrama escolar.
+
+DATOS:
+- Tema específico: "${tema}"
+- Materia: ${datos.materia||'general'}
+- Curso: ${datos.curso} ${datos.paralelo}
+- Longitud de palabra deseada: ${rangoDificultad(dificultad)}
+${indicaciones?('- Indicaciones adicionales del docente: "'+indicaciones+'"'):''}
+
+Responde SOLO con este JSON, sin texto extra, con exactamente ${cantidad} elementos en el arreglo:
+{
+  "palabras":[
+    {"palabra":"PALABRACLAVE1","pista":"Pista clara que describe la palabra sin mencionarla"},
+    {"palabra":"PALABRACLAVE2","pista":"..."}
+  ]
+}`;
+
+  let entries = null;
+  try{
+    const raw = await callGroq(systemPrompt, userPrompt);
+    const clean = raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
+    const jsonMatch = clean.match(/\{[\s\S]*\}/);
+    if(!jsonMatch) throw new Error('No se encontró JSON válido');
+    const parsed = JSON.parse(jsonMatch[0]);
+    entries = parsed.palabras || parsed.words || [];
+  } catch(e){
+    console.warn('Error IA:', e.message);
+  }
+
+  btn.disabled = false;
+  status.classList.remove('show');
+
+  if(!entries || entries.length<2){
+    alert('No se pudo generar el crucigrama con IA. Intenta de nuevo o usa "Generar sin IA".');
+    return;
+  }
+
+  temaActual = tema;
+  procesarYRenderizar(entries, datos);
+}
+
+// ════════════════════════════════════════════
+//  GENERAR MANUAL (sin IA)
+// ════════════════════════════════════════════
+function parsearPalabrasManuales(){
+  const raw = document.getElementById('palabrasManuales').value.trim();
+  if(!raw) return null;
+  const lineas = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  const entries = [];
+  lineas.forEach(l=>{
+    const idx = l.indexOf(':');
+    if(idx===-1) return;
+    const palabra = l.slice(0,idx).trim();
+    const pista = l.slice(idx+1).trim();
+    if(palabra && pista) entries.push({palabra, pista});
+  });
+  return entries.length? entries : null;
+}
+
+function bancoGenerico(){
+  return [
+    {palabra:'ESCUELA', pista:'Lugar donde los estudiantes aprenden'},
+    {palabra:'LIBRO', pista:'Conjunto de hojas impresas con información'},
+    {palabra:'MAESTRO', pista:'Persona que enseña en el aula'},
+    {palabra:'CUADERNO', pista:'Donde los estudiantes escriben sus apuntes'},
+    {palabra:'LAPIZ', pista:'Instrumento para escribir o dibujar'},
+    {palabra:'PIZARRA', pista:'Superficie donde el docente escribe la clase'},
+    {palabra:'TAREA', pista:'Trabajo que se realiza fuera del horario de clase'},
+    {palabra:'EXAMEN', pista:'Prueba para evaluar lo aprendido'},
+  ];
+}
+
+function generarManual(){
+  const datos = getDatos();
+  const manual = parsearPalabrasManuales();
+  const entries = manual || bancoGenerico();
+  temaActual = document.getElementById('tema').value.trim() || 'Vocabulario general';
+  procesarYRenderizar(entries, datos);
+}
+
+// ════════════════════════════════════════════
+//  SANITIZAR Y CONSTRUIR EL CRUCIGRAMA
+// ════════════════════════════════════════════
+function sanitizeWord(w){
+  if(!w) return '';
+  w = w.toString().trim().toUpperCase();
+  w = w.replace(/[ÁÀÂÄ]/g,'A').replace(/[ÉÈÊË]/g,'E').replace(/[ÍÌÎÏ]/g,'I').replace(/[ÓÒÔÖ]/g,'O').replace(/[ÚÙÛÜ]/g,'U');
+  w = w.replace(/[^A-ZÑ]/g,'');
+  return w;
+}
+
+function generarCrucigrama(rawEntries){
+  let seen = new Set();
+  let entries = rawEntries.map(w=>({word: sanitizeWord(w.palabra||w.word), clue:(w.pista||w.clue||'').trim()}))
+    .filter(e=>e.word && e.word.length>=2)
+    .filter(e=>{ if(seen.has(e.word)) return false; seen.add(e.word); return true; });
+
+  entries.sort((a,b)=>b.word.length-a.word.length);
+  if(entries.length===0) return null;
+
+  const SIZE = Math.max(20, Math.ceil(entries.reduce((a,e)=>a+e.word.length,0)/2) + 8);
+  let grid = Array.from({length:SIZE},()=>Array(SIZE).fill(null));
+  let placed = [];
+
+  function inBounds(r,c){ return r>=0 && c>=0 && r<SIZE && c<SIZE; }
+
+  function canPlace(word,row,col,dir){
+    for(let i=0;i<word.length;i++){
+      let r = dir==='H'? row : row+i;
+      let c = dir==='H'? col+i : col;
+      if(!inBounds(r,c)) return false;
+      let cell = grid[r][c];
+      if(cell!==null && cell!==word[i]) return false;
+    }
+    let beforeR = dir==='H'?row:row-1;
+    let beforeC = dir==='H'?col-1:col;
+    if(inBounds(beforeR,beforeC) && grid[beforeR][beforeC]!==null) return false;
+    let afterR = dir==='H'?row:row+word.length;
+    let afterC = dir==='H'?col+word.length:col;
+    if(inBounds(afterR,afterC) && grid[afterR][afterC]!==null) return false;
+    return true;
+  }
+
+  function countIntersections(word,row,col,dir){
+    let count=0;
+    for(let i=0;i<word.length;i++){
+      let r=dir==='H'?row:row+i;
+      let c=dir==='H'?col+i:col;
+      if(grid[r][c]===word[i]) count++;
+    }
+    return count;
+  }
+
+  function place(word,row,col,dir){
+    for(let i=0;i<word.length;i++){
+      let r = dir==='H'?row:row+i;
+      let c = dir==='H'?col+i:col;
+      grid[r][c]=word[i];
+    }
+  }
+
+  let first = entries[0];
+  let startRow = Math.floor(SIZE/2);
+  let startCol = Math.floor((SIZE-first.word.length)/2);
+  place(first.word,startRow,startCol,'H');
+  placed.push({...first,row:startRow,col:startCol,dir:'H'});
+
+  for(let idx=1; idx<entries.length; idx++){
+    let e = entries[idx];
+    let bestPlacement=null, bestScore=-1;
+    for(let i=0;i<e.word.length;i++){
+      let letter = e.word[i];
+      for(let r=0;r<SIZE;r++){
+        for(let c=0;c<SIZE;c++){
+          if(grid[r][c]===letter){
+            let hRow=r, hCol=c-i;
+            if(canPlace(e.word,hRow,hCol,'H')){
+              let score = countIntersections(e.word,hRow,hCol,'H');
+              if(score>bestScore){bestScore=score;bestPlacement={row:hRow,col:hCol,dir:'H'};}
+            }
+            let vRow=r-i, vCol=c;
+            if(canPlace(e.word,vRow,vCol,'V')){
+              let score = countIntersections(e.word,vRow,vCol,'V');
+              if(score>bestScore){bestScore=score;bestPlacement={row:vRow,col:vCol,dir:'V'};}
+            }
+          }
+        }
+      }
+    }
+    if(bestPlacement){
+      place(e.word,bestPlacement.row,bestPlacement.col,bestPlacement.dir);
+      placed.push({...e,...bestPlacement});
+    } else {
+      let done=false;
+      for(let r=0;r<SIZE && !done;r+=2){
+        for(let c=0;c<SIZE-e.word.length && !done;c+=2){
+          if(canPlace(e.word,r,c,'H')){
+            place(e.word,r,c,'H');
+            placed.push({...e,row:r,col:c,dir:'H'});
+            done=true;
+          }
+        }
+      }
+    }
+  }
+
+  let minR=SIZE,maxR=0,minC=SIZE,maxC=0;
+  placed.forEach(p=>{
+    let endR = p.dir==='H'?p.row:p.row+p.word.length-1;
+    let endC = p.dir==='H'?p.col+p.word.length-1:p.col;
+    minR=Math.min(minR,p.row); maxR=Math.max(maxR,endR);
+    minC=Math.min(minC,p.col); maxC=Math.max(maxC,endC);
+  });
+  placed.forEach(p=>{p.row-=minR; p.col-=minC;});
+  let rows=maxR-minR+1, cols=maxC-minC+1;
+
+  let finalGrid = Array.from({length:rows},()=>Array(cols).fill(null));
+  placed.forEach(p=>{
+    for(let i=0;i<p.word.length;i++){
+      let r=p.dir==='H'?p.row:p.row+i;
+      let c=p.dir==='H'?p.col+i:p.col;
+      finalGrid[r][c]=p.word[i];
+    }
+  });
+
+  let numberGrid = Array.from({length:rows},()=>Array(cols).fill(null));
+  let num=1, numberMap={};
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      if(finalGrid[r][c]===null) continue;
+      let startsAcross = (c===0||finalGrid[r][c-1]===null) && c+1<cols && finalGrid[r][c+1]!==null;
+      let startsDown = (r===0||finalGrid[r-1][c]===null) && r+1<rows && finalGrid[r+1][c]!==null;
+      if(startsAcross||startsDown){
+        numberMap[r+','+c]=num;
+        numberGrid[r][c]=num;
+        num++;
+      }
+    }
+  }
+  placed.forEach(p=>{ p.number = numberMap[p.row+','+p.col]; });
+
+  return {grid:finalGrid, numberGrid, rows, cols, placed};
+}
+
+// ════════════════════════════════════════════
+//  PROCESAR Y RENDERIZAR
+// ════════════════════════════════════════════
+function procesarYRenderizar(entries, datos){
+  const resultado = generarCrucigrama(entries);
+  if(!resultado || resultado.placed.length<2){
+    alert('No se pudieron colocar suficientes palabras válidas. Intenta con otras palabras o un tema diferente.');
+    return;
+  }
+  crucigramaActual = resultado;
+  renderCrucigrama(resultado, datos, temaActual);
+}
+
+function renderCrucigrama(data, datos, tema){
+  const {grid, numberGrid, rows, cols, placed} = data;
+  const out = document.getElementById('crucigramaOutput');
+  out.innerHTML = '';
+  out.style.display = 'block';
+
+  const bloque = document.createElement('div');
+  bloque.className = 'cw-page';
+
+  bloque.innerHTML = `
+  <div class="cw-header">
+    <h2>Crucigrama · ${esc(tema)}</h2>
+    <div class="meta">
+      <span>🏫 ${esc(datos.colegio)}</span>
+      ${datos.docente?`<span>👩‍🏫 ${esc(datos.docente)}</span>`:''}
+      ${datos.materia?`<span>📚 ${esc(datos.materia)}</span>`:''}
+      ${datos.curso?`<span>🎓 ${esc(datos.curso)} ${esc(datos.paralelo)}</span>`:''}
+      <span>🧩 ${placed.length} palabras</span>
+    </div>
+  </div>`;
+
+  const body = document.createElement('div');
+  body.className = 'cw-body';
+
+  let gridHtml = `<div class="crossword-grid" style="grid-template-columns:repeat(${cols},30px);grid-template-rows:repeat(${rows},30px);">`;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      if(grid[r][c]===null){
+        gridHtml += `<div class="cw-cell cw-blocked"></div>`;
+      } else {
+        const n = numberGrid[r][c];
+        gridHtml += `<div class="cw-cell">${n?`<span class="cw-num">${n}</span>`:''}<span class="cw-letter">${grid[r][c]}</span></div>`;
+      }
+    }
+  }
+  gridHtml += `</div>`;
+
+  const across = placed.filter(p=>p.dir==='H').sort((a,b)=>a.number-b.number);
+  const down = placed.filter(p=>p.dir==='V').sort((a,b)=>a.number-b.number);
+
+  let cluesHtml = `<div class="cw-clues">
+    <div class="cw-clue-col">
+      <h4>➡️ Horizontales</h4>
+      ${across.map(p=>`<div class="cw-clue-item"><b>${p.number}.</b>${esc(p.clue)}</div>`).join('')}
+    </div>
+    <div class="cw-clue-col">
+      <h4>⬇️ Verticales</h4>
+      ${down.map(p=>`<div class="cw-clue-item"><b>${p.number}.</b>${esc(p.clue)}</div>`).join('')}
+    </div>
+  </div>`;
+
+  body.innerHTML = gridHtml + cluesHtml;
+  bloque.appendChild(body);
+  out.appendChild(bloque);
+
+  document.getElementById('chkRespuestas').checked = false;
+  document.body.classList.add('cw-modo-vacio');
+  document.getElementById('finalActions').style.display = 'flex';
+  out.scrollIntoView({behavior:'smooth'});
+}
+
+function toggleRespuestas(){
+  const chk = document.getElementById('chkRespuestas');
+  document.body.classList.toggle('cw-modo-vacio', !chk.checked);
+}
+
+// ════════════════════════════════════════════
+//  IMPRIMIR
+// ════════════════════════════════════════════
+function imprimirVacio(){
+  document.body.classList.add('cw-modo-vacio');
+  window.print();
+}
+function imprimirConRespuestas(){
+  document.body.classList.remove('cw-modo-vacio');
+  window.print();
+  window.onafterprint = ()=>{
+    if(!document.getElementById('chkRespuestas').checked){
+      document.body.classList.add('cw-modo-vacio');
+    }
+  };
+}
+
+// ════════════════════════════════════════════
+//  EXPORTAR EXCEL
+// ════════════════════════════════════════════
+function exportarExcelCrucigrama(){
+  if(!crucigramaActual){ alert('Primero genera un crucigrama.'); return; }
+  const datos = getDatos();
+  const wb = XLSX.utils.book_new();
+  const ws = {};
+  const merges = [];
+  let R=0;
+
+  ws[XLSX.utils.encode_cell({r:R,c:0})] = {v:`CRUCIGRAMA – ${temaActual}`, t:'s',
+    s:{font:{bold:true,color:{rgb:'FFFFFF'},size:13},fill:{fgColor:{rgb:'5B3EC8'}},
+       alignment:{horizontal:'center',vertical:'center'}}};
+  merges.push({s:{r:R,c:0},e:{r:R,c:3}});
+  R++;
+
+  ws[XLSX.utils.encode_cell({r:R,c:0})] = {v:`U.E.: ${datos.colegio}   Docente: ${datos.docente}   Materia: ${datos.materia}   Curso: ${datos.curso} ${datos.paralelo}`,t:'s',
+    s:{font:{size:8,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'7C5CF0'}},alignment:{horizontal:'left',vertical:'center'}}};
+  merges.push({s:{r:R,c:0},e:{r:R,c:3}});
+  R+=2;
+
+  ['#','Dirección','Palabra','Pista'].forEach((h,ci)=>{
+    ws[XLSX.utils.encode_cell({r:R,c:ci})] = {v:h,t:'s',
+      s:{font:{bold:true,color:{rgb:'FFFFFF'},size:9},fill:{fgColor:{rgb:'5B3EC8'}},
+         alignment:{horizontal:'center',vertical:'center'}}};
+  });
+  R++;
+
+  const ordenadas = [...crucigramaActual.placed].sort((a,b)=> (a.number-b.number) || (a.dir>b.dir?1:-1));
+  ordenadas.forEach((p,i)=>{
+    const rowBg = i%2===0?'FFFFFF':'F3F0FC';
+    ws[XLSX.utils.encode_cell({r:R,c:0})] = {v:p.number,t:'n',s:{font:{bold:true,size:9},fill:{fgColor:{rgb:rowBg}},alignment:{horizontal:'center'}}};
+    ws[XLSX.utils.encode_cell({r:R,c:1})] = {v:p.dir==='H'?'Horizontal':'Vertical',t:'s',s:{font:{size:9},fill:{fgColor:{rgb:rowBg}},alignment:{horizontal:'center'}}};
+    ws[XLSX.utils.encode_cell({r:R,c:2})] = {v:p.word,t:'s',s:{font:{bold:true,size:9,color:{rgb:'5B3EC8'}},fill:{fgColor:{rgb:rowBg}},alignment:{horizontal:'left'}}};
+    ws[XLSX.utils.encode_cell({r:R,c:3})] = {v:p.clue,t:'s',s:{font:{size:9},fill:{fgColor:{rgb:rowBg}},alignment:{horizontal:'left',wrapText:true}}};
+    R++;
+  });
+
+  ws['!cols']=[{wch:5},{wch:14},{wch:20},{wch:60}];
+  ws['!merges']=merges;
+  ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:R+1,c:3}});
+  XLSX.utils.book_append_sheet(wb, ws, 'Crucigrama');
+
+  const fecha = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `Crucigrama_${(temaActual||'tema').replace(/[^a-zA-Z0-9]/g,'_')}_${fecha}.xlsx`);
+}
+
+function resetForm(){
+  crucigramaActual = null;
+  document.getElementById('crucigramaOutput').innerHTML='';
+  document.getElementById('crucigramaOutput').style.display='none';
+  document.getElementById('finalActions').style.display='none';
+  document.body.classList.add('cw-modo-vacio');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>

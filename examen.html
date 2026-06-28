@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Generador de Exámenes IA – PC REVIVE</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#eef3fb;
+  --surface:#ffffff;
+  --blue:#15397a;
+  --blue2:#1d5bc2;
+  --blue-light:#e3ebfa;
+  --blue-mid:#b9cdf2;
+  --accent:#f59e0b;
+  --ok:#1a7a4a;
+  --ink:#16213d;
+  --text:#1a2336;
+  --muted:#5d6b85;
+  --border:#cfdaf2;
+  --shadow:0 8px 32px rgba(21,57,122,0.10);
+  --radius:16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── OVERLAY CONTRASEÑA ── */
+#lockScreen{
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(135deg,#08163a 0%,#15397a 50%,#08163a 100%);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
+}
+.lock-card{
+  background:rgba(255,255,255,0.07);
+  border:1.5px solid rgba(255,255,255,0.18);
+  border-radius:24px;padding:48px 40px;width:min(420px,90vw);
+  backdrop-filter:blur(18px);display:flex;flex-direction:column;gap:20px;
+  box-shadow:0 24px 64px rgba(0,0,0,0.4);
+}
+.lock-logo{font-family:'DM Serif Display',serif;font-size:2rem;color:#fff;text-align:center;text-shadow:0 2px 12px rgba(0,0,0,0.3);}
+.lock-sub{font-size:.85rem;color:rgba(255,255,255,0.6);text-align:center;}
+.lock-label{font-size:.78rem;font-weight:700;color:rgba(255,255,255,0.7);letter-spacing:1.5px;text-transform:uppercase;}
+.lock-input{width:100%;padding:13px 16px;background:rgba(255,255,255,0.12);border:1.5px solid rgba(255,255,255,0.25);
+  border-radius:10px;color:#fff;font-size:.95rem;font-family:'Plus Jakarta Sans',sans-serif;outline:none;transition:border .2s;}
+.lock-input::placeholder{color:rgba(255,255,255,0.35);}
+.lock-input:focus{border-color:var(--blue2);}
+.lock-btn{width:100%;padding:14px;background:var(--blue2);border:none;border-radius:10px;color:#fff;font-weight:800;font-size:1rem;
+  font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:background .2s,transform .15s;}
+.lock-btn:hover{background:#2a6fe0;transform:translateY(-2px);}
+.lock-err{color:#ff6b6b;font-size:.85rem;text-align:center;min-height:20px;}
+
+/* ── MAIN APP ── */
+#app{display:none;}
+.top-bar{background:linear-gradient(90deg,var(--blue) 0%,var(--blue2) 100%);padding:18px 32px;
+  display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 18px rgba(21,57,122,0.18);}
+.top-bar-title{font-family:'DM Serif Display',serif;font-size:1.5rem;color:#fff;letter-spacing:-.5px;}
+.top-bar-sub{font-size:.78rem;color:rgba(255,255,255,.7);margin-top:2px;}
+.logout-btn{background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);color:#fff;padding:7px 18px;
+  border-radius:999px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:background .2s;}
+.logout-btn:hover{background:rgba(255,255,255,.25);}
+
+.container{max-width:1100px;margin:0 auto;padding:32px 20px 60px;}
+.card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:28px 32px;
+  box-shadow:var(--shadow);margin-bottom:24px;}
+.card-title{font-family:'DM Serif Display',serif;font-size:1.25rem;color:var(--blue);margin-bottom:20px;
+  display:flex;align-items:center;gap:10px;}
+.card-title span{font-size:1.4rem;}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;}
+@media(max-width:640px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}}
+
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:.76rem;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.field input,.field select,.field textarea{padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;
+  font-size:.92rem;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);outline:none;
+  transition:border .2s,box-shadow .2s;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue2);box-shadow:0 0 0 3px rgba(29,91,194,.14);}
+.field textarea{resize:vertical;min-height:90px;}
+.field .hint{font-size:.74rem;color:var(--muted);margin-top:2px;}
+
+.btn-primary{padding:13px 30px;background:var(--blue);color:#fff;border:none;border-radius:12px;font-weight:800;
+  font-size:.95rem;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:background .2s,transform .15s;
+  display:inline-flex;align-items:center;gap:8px;}
+.btn-primary:hover{background:#0f2a5c;transform:translateY(-2px);}
+.btn-ai{padding:13px 30px;background:linear-gradient(90deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:12px;
+  font-weight:800;font-size:.95rem;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:opacity .2s,transform .15s;
+  display:inline-flex;align-items:center;gap:8px;}
+.btn-ai:hover{opacity:.88;transform:translateY(-2px);}
+.btn-ai:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.btn-print{padding:13px 26px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-weight:800;
+  font-size:.92rem;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:background .2s,transform .15s;
+  display:inline-flex;align-items:center;gap:8px;}
+.btn-print:hover{background:#d48806;transform:translateY(-2px);}
+.btn-dir{padding:13px 26px;background:#7c1d2e;color:#fff;border:none;border-radius:12px;font-weight:800;
+  font-size:.92rem;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:background .2s,transform .15s;
+  display:inline-flex;align-items:center;gap:8px;}
+.btn-dir:hover{background:#5e1322;transform:translateY(-2px);}
+.btn-word{padding:13px 26px;background:#2b579a;color:#fff;border:none;border-radius:12px;font-weight:800;
+  font-size:.92rem;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:background .2s,transform .15s;
+  display:inline-flex;align-items:center;gap:8px;}
+.btn-word:hover{background:#1f4275;transform:translateY(-2px);}
+.btn-excel{padding:13px 26px;background:#217346;color:#fff;border:none;border-radius:12px;font-weight:800;
+  font-size:.92rem;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:background .2s,transform .15s;
+  display:inline-flex;align-items:center;gap:8px;}
+.btn-excel:hover{background:#185c38;transform:translateY(-2px);}
+
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;}
+.actions-group{margin-bottom:14px;}
+.actions-group p{font-size:.76rem;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px;}
+
+.ai-status{padding:12px 20px;border-radius:10px;font-size:.88rem;font-weight:600;background:var(--blue-light);
+  color:var(--blue);border:1.5px solid var(--blue-mid);display:none;align-items:center;gap:8px;margin-top:14px;}
+.ai-status.show{display:flex;}
+.spinner{width:16px;height:16px;border:2.5px solid var(--blue-mid);border-top-color:var(--blue2);border-radius:50%;
+  animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ════════ DOCUMENTO DE EXAMEN (estilos en línea reutilizables vía JS para Word) ════════ */
+#examenOutput{display:none;}
+.exam-wrap{margin-bottom:30px;}
+.exam-tag{display:inline-block;padding:6px 16px;border-radius:999px;font-size:.78rem;font-weight:800;margin-bottom:10px;}
+.exam-tag.dir{background:#fde2e2;color:#7c1d2e;}
+.exam-tag.est{background:#dcfce7;color:#15803d;}
+
+@media print{
+  @page{size:letter;margin:14mm 16mm;}
+  #lockScreen,#app .top-bar,.card,.actions,.ai-status,#finalActions{display:none!important;}
+  #examenOutput{display:block!important;}
+  body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .container{padding:0!important;max-width:100%!important;}
+  .exam-tag{display:none!important;}
+  body.modo-print-director .exam-page-estudiante{display:none!important;}
+  body.modo-print-estudiante .exam-page-director{display:none!important;}
+  .exam-page-director,.exam-page-estudiante{page-break-after:always;}
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     PANTALLA DE CONTRASEÑA
+═══════════════════════════════════════════ -->
+<div id="lockScreen">
+  <div class="lock-card">
+    <div class="lock-logo"> PC REVIVE<br/><small style="font-size:.9rem;font-family:'Plus Jakarta Sans',sans-serif;font-weight:400;opacity:.7">Generador de Exámenes</small></div>
+    <div class="lock-sub">Acceso docente — Bolivia 2026</div>
+    <div class="field">
+      <label class="lock-label">Contraseña de acceso</label>
+      <input class="lock-input" type="password" id="pass1" placeholder="Contraseña del sistema"/>
+    </div>
+    <div class="field">
+      <label class="lock-label">INTRODUCE LA CLAVE QUE TE ENVIARON</label>
+      <input class="lock-input" type="password" id="pass2" placeholder="gsk_xxxxxxxxxxxxxxxxxxxx"/>
+    </div>
+    <div class="lock-err" id="lockErr"></div>
+    <button class="lock-btn" onclick="unlock()">Ingresar →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     APP PRINCIPAL
+═══════════════════════════════════════════ -->
+<div id="app">
+
+  <div class="top-bar">
+    <div>
+      <div class="top-bar-title">Generador de Exámenes</div>
+      <div class="top-bar-sub">PC REVIVE · Sistema Educativo Bolivia · Versión Dirección + Versión Estudiante</div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Salir</button>
+  </div>
+
+  <div class="container">
+
+    <!-- ── DATOS GENERALES ── -->
+    <div class="card">
+      <div class="card-title"><span></span> Datos de la Institución y la Prueba</div>
+      <div class="grid-3" style="margin-bottom:16px;">
+        <div class="field"><label>Unidad Educativa</label><input type="text" id="colegio" placeholder="Nombre del colegio"/></div>
+        <div class="field"><label>Docente</label><input type="text" id="docente" placeholder="Nombre completo"/></div>
+        <div class="field"><label>Área / Materia</label><input type="text" id="materia" placeholder="Ej: Biología"/></div>
+      </div>
+      <div class="grid-4">
+        <div class="field">
+          <label>Curso</label>
+          <select id="curso">
+            <option value="">— Seleccionar —</option>
+            <optgroup label="Primaria">
+              <option>1ro Primaria</option><option>2do Primaria</option><option>3ro Primaria</option>
+              <option>4to Primaria</option><option>5to Primaria</option><option>6to Primaria</option>
+            </optgroup>
+            <optgroup label="Secundaria">
+              <option>1ro Secundaria</option><option>2do Secundaria</option><option>3ro Secundaria</option>
+              <option>4to Secundaria</option><option>5to Secundaria</option><option>6to Secundaria</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="field"><label>Paralelo</label><input type="text" id="paralelo" placeholder="Ej: A"/></div>
+        <div class="field"><label>Bimestre / Trimestre</label>
+          <select id="bimestre">
+            <option value="">— Seleccionar —</option>
+            <option>1er Bimestre</option><option>2do Bimestre</option><option>3er Bimestre</option><option>4to Bimestre</option>
+            <option>1er Trimestre</option><option>2do Trimestre</option><option>3er Trimestre</option>
+          </select>
+        </div>
+        <div class="field"><label>Fecha del examen</label><input type="date" id="fecha"/></div>
+      </div>
+    </div>
+
+    <!-- ── TEMARIO Y CONFIGURACIÓN ── -->
+    <div class="card">
+      <div class="card-title"><span></span> Temas Desarrollados en Clase</div>
+      <div class="field" style="margin-bottom:16px;">
+        <label>Contenidos / temas que entran en el examen</label>
+        <textarea id="temas" placeholder="Describe los temas vistos en clase que se evaluarán. Ej:&#10;- La célula y sus partes&#10;- Tipos de tejidos&#10;- Funciones del sistema digestivo"></textarea>
+        <div class="hint">Cuanto más detalle den, más preciso será el examen generado por la IA.</div>
+      </div>
+      <div class="grid-4" style="margin-bottom:16px;">
+        <div class="field"><label>Opción múltiple</label><input type="number" id="numOM" min="0" max="20" value="6"/></div>
+        <div class="field"><label>Verdadero / Falso</label><input type="number" id="numVF" min="0" max="20" value="4"/></div>
+        <div class="field"><label>Completar</label><input type="number" id="numComp" min="0" max="20" value="3"/></div>
+        <div class="field"><label>Desarrollo / Ensayo</label><input type="number" id="numDes" min="0" max="10" value="2"/></div>
+      </div>
+      <div class="grid-2">
+        <div class="field"><label>Puntaje total del examen</label><input type="number" id="puntajeTotal" min="10" max="200" value="100"/></div>
+        <div class="field"><label>Indicaciones adicionales (opcional)</label><input type="text" id="indicaciones" placeholder="Ej: dificultad media, evitar preguntas de memoria pura..."/></div>
+      </div>
+    </div>
+
+    <!-- ── IA ── -->
+    <div class="card">
+      <div class="card-title"><span></span> Generación con IA </div>
+      <p style="font-size:.87rem;color:var(--muted);margin-bottom:16px;">
+        La IA generará el examen completo basado en los temas indicados: preguntas, opciones y la clave de respuestas para la versión de Dirección.
+      </p>
+      <div class="actions">
+        <button class="btn-ai" id="btnIA" onclick="generarConIA()">✨ Generar Examen con IA</button>
+        <button class="btn-primary" onclick="generarManual()">📋 Generar plantilla sin IA</button>
+      </div>
+      <div class="ai-status" id="aiStatus">
+        <div class="spinner"></div>
+        <span id="aiStatusMsg">Consultando IA, por favor espera...</span>
+      </div>
+    </div>
+
+    <!-- ── OUTPUT ── -->
+    <div id="examenOutput"></div>
+
+    <!-- acciones finales -->
+    <div id="finalActions" style="display:none;">
+      <div class="card">
+        <div class="actions-group">
+          <p>Versión para Dirección (con clave de respuestas)</p>
+          <div class="actions">
+            <button class="btn-dir" onclick="imprimir('director')">🖨️ Imprimir / PDF — Dirección</button>
+            <button class="btn-word" onclick="exportarWord('director')">📄 Descargar Word — Dirección</button>
+          </div>
+        </div>
+        <div class="actions-group">
+          <p>Versión para Estudiantes (vacía)</p>
+          <div class="actions">
+            <button class="btn-print" onclick="imprimir('estudiante')">🖨️ Imprimir / PDF — Estudiantes</button>
+            <button class="btn-word" onclick="exportarWord('estudiante')">📄 Descargar Word — Estudiantes</button>
+          </div>
+        </div>
+        <div class="actions-group">
+          <p>Otros</p>
+          <div class="actions">
+            <button class="btn-excel" onclick="exportarExcelClave()">📊 Exportar clave de respuestas a Excel</button>
+            <button class="btn-primary" onclick="resetForm()">🔄 Nuevo Examen</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /container -->
+</div><!-- /app -->
+
+<script>
+let GROQ_KEY = '';
+let examenActual = null; // {items:[{type,...,pts,num}], datos, temas}
+
+// ════════════════════════════════════════════
+//  LOCK
+// ════════════════════════════════════════════
+function unlock(){
+  const p1  = document.getElementById('pass1').value.trim();
+  const p2  = document.getElementById('pass2').value.trim();
+  const err = document.getElementById('lockErr');
+  const hashIngresado = btoa(p1 + 'pdc_salt_2026');
+  if(btoa('pdc2026' + 'pdc_salt_2026') !== hashIngresado){
+    err.textContent = 'Contraseña incorrecta.';
+    return;
+  }
+  if(p2.length < 20){
+    err.textContent = 'Ingresa una clave API de Groq válida.';
+    return;
+  }
+  GROQ_KEY = p2;
+  err.textContent = '';
+  document.getElementById('lockScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+function logout(){
+  GROQ_KEY = '';
+  document.getElementById('lockScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('pass1').value = '';
+  document.getElementById('pass2').value = '';
+}
+document.addEventListener('keydown', e=>{ if(e.key==='Enter' && document.getElementById('lockScreen').style.display!=='none') unlock(); });
+
+// ════════════════════════════════════════════
+//  UTILIDADES
+// ════════════════════════════════════════════
+function esc(s){
+  return (s===undefined||s===null?'':s.toString())
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function getDatos(){
+  return {
+    colegio:document.getElementById('colegio').value||'U.E. sin nombre',
+    docente:document.getElementById('docente').value||'',
+    materia:document.getElementById('materia').value||'',
+    curso:document.getElementById('curso').value||'',
+    paralelo:document.getElementById('paralelo').value||'',
+    bimestre:document.getElementById('bimestre').value||'',
+    fecha:document.getElementById('fecha').value||'',
+  };
+}
+
+// ════════════════════════════════════════════
+//  GROQ API
+// ════════════════════════════════════════════
+async function callGroq(systemPrompt, userPrompt){
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+GROQ_KEY},
+    body:JSON.stringify({
+      model:'llama-3.3-70b-versatile',
+      max_tokens:3200,
+      temperature:0.7,
+      response_format:{type:'json_object'},
+      messages:[{role:'system',content:systemPrompt},{role:'user',content:userPrompt}]
+    })
+  });
+  if(!resp.ok) throw new Error('Error Groq: '+resp.status);
+  const data=await resp.json();
+  return data.choices[0].message.content;
+}
+
+// ════════════════════════════════════════════
+//  GENERAR CON IA
+// ════════════════════════════════════════════
+async function generarConIA(){
+  const temas = document.getElementById('temas').value.trim();
+  if(!temas){ alert('Por favor describe los temas desarrollados en clase.'); return; }
+
+  const datos = getDatos();
+  const numOM   = parseInt(document.getElementById('numOM').value)||0;
+  const numVF   = parseInt(document.getElementById('numVF').value)||0;
+  const numComp = parseInt(document.getElementById('numComp').value)||0;
+  const numDes  = parseInt(document.getElementById('numDes').value)||0;
+  const indicaciones = document.getElementById('indicaciones').value.trim();
+
+  if(numOM+numVF+numComp+numDes===0){ alert('Indica al menos una pregunta en alguna sección.'); return; }
+
+  const btn = document.getElementById('btnIA');
+  const status = document.getElementById('aiStatus');
+  const msg = document.getElementById('aiStatusMsg');
+  btn.disabled = true;
+  status.classList.add('show');
+  msg.textContent = 'Generando preguntas del examen con IA...';
+
+  const systemPrompt = `Eres un experto en educación boliviana especializado en elaborar pruebas escritas (exámenes) de calidad para todas las áreas y niveles.
+Generas preguntas claras, sin ambigüedades, pedagógicamente apropiadas para el nivel educativo indicado, basadas ESTRICTAMENTE en los temas que indique el docente.
+Para opción múltiple: exactamente 4 opciones, solo una correcta, las incorrectas deben ser distractores plausibles (no obviamente falsos).
+Para verdadero/falso: enunciados afirmativos (no preguntas) que puedan calificarse claramente como verdaderos o falsos.
+Para completar: un enunciado con un espacio marcado como "_____" donde falta un término o frase clave.
+Para desarrollo: preguntas abiertas que exijan explicar, analizar o argumentar, junto con una respuesta modelo o criterios de evaluación breves para el docente.
+Respondes ÚNICAMENTE con JSON válido, sin texto adicional, sin explicaciones, sin markdown.`;
+
+  const userPrompt = `Genera un examen escrito sobre los siguientes temas desarrollados en clase.
+
+DATOS:
+- Materia: ${datos.materia||'general'}
+- Curso: ${datos.curso} ${datos.paralelo}
+- Temas desarrollados en clase:
+"""
+${temas}
+"""
+${indicaciones?('- Indicaciones adicionales del docente: "'+indicaciones+'"'):''}
+
+Genera exactamente:
+- ${numOM} preguntas de opción múltiple
+- ${numVF} preguntas de verdadero/falso
+- ${numComp} preguntas para completar
+- ${numDes} preguntas de desarrollo
+
+Responde SOLO con este JSON (omite los arreglos cuya cantidad solicitada sea 0, o déjalos vacíos []):
+{
+  "opcion_multiple":[
+    {"pregunta":"texto de la pregunta","opciones":["opción A","opción B","opción C","opción D"],"correcta":0}
+  ],
+  "verdadero_falso":[
+    {"enunciado":"afirmación evaluable","correcta":true}
+  ],
+  "completar":[
+    {"enunciado":"texto con un espacio marcado _____ para completar","respuesta":"palabra o frase que falta"}
+  ],
+  "desarrollo":[
+    {"pregunta":"pregunta abierta de análisis","respuesta_modelo":"criterios de evaluación o respuesta esperada, breve"}
+  ]
+}`;
+
+  let parsed = null;
+  try{
+    const raw = await callGroq(systemPrompt, userPrompt);
+    const clean = raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
+    const jsonMatch = clean.match(/\{[\s\S]*\}/);
+    if(!jsonMatch) throw new Error('No se encontró JSON válido');
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch(e){
+    console.warn('Error IA:', e.message);
+  }
+
+  btn.disabled = false;
+  status.classList.remove('show');
+
+  if(!parsed){
+    alert('No se pudo generar el examen con IA. Intenta de nuevo o usa "Generar plantilla sin IA".');
+    return;
+  }
+
+  construirYRenderizar(parsed, datos, temas, {numOM,numVF,numComp,numDes});
+}
+
+// ════════════════════════════════════════════
+//  GENERAR SIN IA (plantilla)
+// ════════════════════════════════════════════
+function generarManual(){
+  const datos = getDatos();
+  const temas = document.getElementById('temas').value.trim() || 'Tema general de la materia';
+  const numOM   = parseInt(document.getElementById('numOM').value)||0;
+  const numVF   = parseInt(document.getElementById('numVF').value)||0;
+  const numComp = parseInt(document.getElementById('numComp').value)||0;
+  const numDes  = parseInt(document.getElementById('numDes').value)||0;
+
+  if(numOM+numVF+numComp+numDes===0){ alert('Indica al menos una pregunta en alguna sección.'); return; }
+
+  const parsed = {opcion_multiple:[],verdadero_falso:[],completar:[],desarrollo:[]};
+  const temaPrincipal = temas.split('\n')[0];
+  for(let i=1;i<=numOM;i++) parsed.opcion_multiple.push({pregunta:`Pregunta ${i} de opción múltiple sobre "${temaPrincipal}" (edítala)`,opciones:['Opción A','Opción B','Opción C','Opción D'],correcta:0});
+  for(let i=1;i<=numVF;i++) parsed.verdadero_falso.push({enunciado:`Afirmación ${i} sobre el tema desarrollado (edítala)`,correcta:true});
+  for(let i=1;i<=numComp;i++) parsed.completar.push({enunciado:`Complete: El concepto desarrollado en clase se relaciona con _____ (edítalo).`,respuesta:'respuesta'});
+  for(let i=1;i<=numDes;i++) parsed.desarrollo.push({pregunta:`Explique con sus propias palabras un aspecto importante del tema desarrollado en clase.`,respuesta_modelo:'Criterios de evaluación: claridad, uso de vocabulario técnico, ejemplos pertinentes (editar).'});
+
+  construirYRenderizar(parsed, datos, temas, {numOM,numVF,numComp,numDes});
+}
+
+// ════════════════════════════════════════════
+//  COMPLETAR FALTANTES Y DISTRIBUIR PUNTOS
+// ════════════════════════════════════════════
+function rellenarFaltantes(parsed, solicitado, temas){
+  const tema1 = (temas||'').split('\n')[0] || 'el tema desarrollado';
+  parsed.opcion_multiple = parsed.opcion_multiple||[];
+  parsed.verdadero_falso = parsed.verdadero_falso||[];
+  parsed.completar = parsed.completar||[];
+  parsed.desarrollo = parsed.desarrollo||[];
+
+  while(parsed.opcion_multiple.length < solicitado.numOM){
+    parsed.opcion_multiple.push({pregunta:`Pregunta adicional sobre ${tema1} (completar manualmente)`,opciones:['Opción A','Opción B','Opción C','Opción D'],correcta:0});
+  }
+  while(parsed.verdadero_falso.length < solicitado.numVF){
+    parsed.verdadero_falso.push({enunciado:`Afirmación adicional sobre ${tema1} (completar manualmente)`,correcta:true});
+  }
+  while(parsed.completar.length < solicitado.numComp){
+    parsed.completar.push({enunciado:`Complete: aspecto de ${tema1} relacionado con _____.`,respuesta:'respuesta'});
+  }
+  while(parsed.desarrollo.length < solicitado.numDes){
+    parsed.desarrollo.push({pregunta:`Explique un aspecto relevante de ${tema1}.`,respuesta_modelo:'Criterios de evaluación (completar manualmente).'});
+  }
+  parsed.opcion_multiple = parsed.opcion_multiple.slice(0, solicitado.numOM);
+  parsed.verdadero_falso = parsed.verdadero_falso.slice(0, solicitado.numVF);
+  parsed.completar = parsed.completar.slice(0, solicitado.numComp);
+  parsed.desarrollo = parsed.desarrollo.slice(0, solicitado.numDes);
+  return parsed;
+}
+
+function distribuirPuntos(counts, total){
+  const weights = {om:1, vf:0.6, comp:1, des:2.5};
+  let totalWeight = 0;
+  Object.keys(counts).forEach(k=> totalWeight += counts[k]*weights[k]);
+  if(totalWeight===0) return [];
+  let unit = total/totalWeight;
+  let allItems = [];
+  Object.keys(counts).forEach(k=>{
+    for(let i=0;i<counts[k];i++){
+      let pts = Math.round(unit*weights[k]*2)/2;
+      if(pts<0.5) pts=0.5;
+      allItems.push({type:k, idx:i, pts});
+    }
+  });
+  let sum = allItems.reduce((a,b)=>a+b.pts,0);
+  let diff = Math.round((total-sum)*2)/2;
+  if(allItems.length){
+    allItems[allItems.length-1].pts = Math.round((allItems[allItems.length-1].pts + diff)*2)/2;
+    if(allItems[allItems.length-1].pts < 0.5) allItems[allItems.length-1].pts = 0.5;
+  }
+  return allItems;
+}
+
+// ════════════════════════════════════════════
+//  CONSTRUIR ESTRUCTURA FINAL Y RENDERIZAR
+// ════════════════════════════════════════════
+function construirYRenderizar(parsedRaw, datos, temas, solicitado){
+  const parsed = rellenarFaltantes(parsedRaw, solicitado, temas);
+  const puntajeTotal = parseFloat(document.getElementById('puntajeTotal').value)||100;
+
+  const counts = {om:parsed.opcion_multiple.length, vf:parsed.verdadero_falso.length, comp:parsed.completar.length, des:parsed.desarrollo.length};
+  const puntos = distribuirPuntos(counts, puntajeTotal);
+
+  let p = 0;
+  const items = [];
+  let nGlobal = 1;
+
+  parsed.opcion_multiple.forEach(q=>{ items.push({type:'om', num:nGlobal++, pts:puntos[p++].pts, ...q}); });
+  parsed.verdadero_falso.forEach(q=>{ items.push({type:'vf', num:nGlobal++, pts:puntos[p++].pts, ...q}); });
+  parsed.completar.forEach(q=>{ items.push({type:'comp', num:nGlobal++, pts:puntos[p++].pts, ...q}); });
+  parsed.desarrollo.forEach(q=>{ items.push({type:'des', num:nGlobal++, pts:puntos[p++].pts, ...q}); });
+
+  examenActual = {items, datos, temas, puntajeTotal};
+  renderExamen(examenActual);
+}
+
+// ════════════════════════════════════════════
+//  RENDER (HTML con estilos en línea, reutilizable para pantalla, impresión y Word)
+// ════════════════════════════════════════════
+function construirEncabezado(datos, titulo, etiquetaColor){
+  return `
+  <div style="background:linear-gradient(90deg,#15397a,#1d5bc2);padding:18px 26px;color:#fff;border-radius:14px 14px 0 0;">
+    <div style="font-family:'DM Serif Display',Georgia,serif;font-size:20px;font-weight:700;">${esc(datos.colegio)}</div>
+    <div style="font-size:12px;opacity:.85;margin-top:3px;">${titulo}</div>
+  </div>
+  <div style="background:#fff;padding:14px 26px;border:1px solid #cfdaf2;border-top:none;">
+    <table style="width:100%;font-size:12.5px;border-collapse:collapse;">
+      <tr>
+        <td style="padding:3px 0;"><b>Docente:</b> ${esc(datos.docente)}</td>
+        <td style="padding:3px 0;"><b>Área:</b> ${esc(datos.materia)}</td>
+        <td style="padding:3px 0;"><b>Curso:</b> ${esc(datos.curso)} ${esc(datos.paralelo)}</td>
+      </tr>
+      <tr>
+        <td style="padding:3px 0;"><b>Periodo:</b> ${esc(datos.bimestre)}</td>
+        <td style="padding:3px 0;"><b>Fecha:</b> ${esc(datos.fecha)}</td>
+        <td style="padding:3px 0;"><b>Puntaje total:</b> ____ / ${examenActual.puntajeTotal} pts</td>
+      </tr>
+    </table>
+    <div style="margin-top:10px;display:flex;gap:24px;font-size:12.5px;">
+      <div style="flex:2;"><b>Estudiante:</b> ____________________________________________</div>
+      <div style="flex:1;"><b>Nota:</b> __________</div>
+    </div>
+  </div>`;
+}
+
+function bloqueSeccion(titulo, color){
+  return `<div style="background:${color};color:#fff;padding:8px 14px;font-weight:800;font-size:12.5px;letter-spacing:.5px;margin-top:18px;border-radius:6px;">${esc(titulo)}</div>`;
+}
+
+function renderPregunta(item, conRespuestas){
+  const baseStyle = "padding:12px 6px;border-bottom:1px solid #e3ebfa;font-size:13px;line-height:1.5;";
+  if(item.type==='om'){
+    const opciones = (item.opciones||[]).map((op,i)=>{
+      const letra = String.fromCharCode(65+i);
+      const esCorrecta = conRespuestas && i===item.correcta;
+      return `<div style="padding:3px 0 3px 18px;${esCorrecta?'font-weight:800;color:#15803d;':''}">
+        ${esCorrecta?'✔ ':''}<b>${letra})</b> ${esc(op)}
+      </div>`;
+    }).join('');
+    return `<div style="${baseStyle}">
+      <div><b>${item.num}.</b> ${esc(item.pregunta)} <span style="color:#5d6b85;font-size:11px;">(${item.pts} pts)</span></div>
+      ${opciones}
+    </div>`;
+  }
+  if(item.type==='vf'){
+    const v = conRespuestas && item.correcta;
+    const f = conRespuestas && !item.correcta;
+    return `<div style="${baseStyle}">
+      <div><b>${item.num}.</b> ${esc(item.enunciado)} <span style="color:#5d6b85;font-size:11px;">(${item.pts} pts)</span></div>
+      <div style="padding:4px 0 0 18px;">
+        <span style="display:inline-block;width:80px;${v?'font-weight:800;color:#15803d;':''}">${v?'✔ ':''}Verdadero</span>
+        <span style="display:inline-block;${f?'font-weight:800;color:#15803d;':''}">${f?'✔ ':''}Falso</span>
+      </div>
+    </div>`;
+  }
+  if(item.type==='comp'){
+    let texto = esc(item.enunciado);
+    if(conRespuestas){
+      texto = texto.replace(/_+/, `<span style="color:#15803d;font-weight:800;text-decoration:underline;">${esc(item.respuesta)}</span>`);
+    } else {
+      texto = texto.replace(/_+/, '<span style="display:inline-block;min-width:120px;border-bottom:1.5px solid #16213d;">&nbsp;</span>');
+    }
+    return `<div style="${baseStyle}">
+      <div><b>${item.num}.</b> ${texto} <span style="color:#5d6b85;font-size:11px;">(${item.pts} pts)</span></div>
+    </div>`;
+  }
+  // desarrollo
+  let respuestaHtml = '';
+  if(conRespuestas){
+    respuestaHtml = `<div style="margin-top:6px;padding:8px 12px;background:#f0fdf4;border:1px dashed #15803d;border-radius:8px;font-size:12px;color:#15803d;">
+      <b>Respuesta modelo / criterios:</b> ${esc(item.respuesta_modelo)}
+    </div>`;
+  } else {
+    respuestaHtml = `<div style="margin-top:8px;">
+      ${[1,2,3,4].map(()=>`<div style="border-bottom:1px solid #16213d;height:22px;"></div>`).join('')}
+    </div>`;
+  }
+  return `<div style="${baseStyle}">
+    <div><b>${item.num}.</b> ${esc(item.pregunta)} <span style="color:#5d6b85;font-size:11px;">(${item.pts} pts)</span></div>
+    ${respuestaHtml}
+  </div>`;
+}
+
+function construirCuerpoExamen(examen, conRespuestas){
+  const grupos = [
+    {type:'om',   titulo:'I. OPCIÓN MÚLTIPLE — Encierra en un círculo la respuesta correcta', color:'#1d5bc2'},
+    {type:'vf',   titulo:'II. VERDADERO O FALSO — Marca con una X la opción correcta',         color:'#7c3aed'},
+    {type:'comp', titulo:'III. COMPLETACIÓN — Escribe la palabra o frase que falta',            color:'#0e7490'},
+    {type:'des',  titulo:'IV. DESARROLLO — Responde de forma clara y ordenada',                  color:'#b45309'},
+  ];
+  let html = '';
+  grupos.forEach(g=>{
+    const items = examen.items.filter(i=>i.type===g.type);
+    if(items.length===0) return;
+    html += bloqueSeccion(g.titulo, g.color);
+    items.forEach(it=>{ html += renderPregunta(it, conRespuestas); });
+  });
+  return html;
+}
+
+function construirPiePagina(datos, esDirector){
+  if(esDirector){
+    return `<div style="margin-top:26px;display:flex;gap:30px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:180px;text-align:center;">
+        <div style="border-top:1.5px solid #888;padding-top:6px;font-size:11.5px;color:#5d6b85;">
+          Elaborado por:<br/><b>${esc(datos.docente)}</b>
+        </div>
+      </div>
+      <div style="flex:1;min-width:180px;text-align:center;">
+        <div style="border-top:1.5px solid #888;padding-top:6px;font-size:11.5px;color:#5d6b85;">
+          Revisado y aprobado por:<br/><b>Director/a — ____________________</b>
+        </div>
+      </div>
+      <div style="flex:1;min-width:180px;text-align:center;">
+        <div style="border-top:1.5px solid #888;padding-top:6px;font-size:11.5px;color:#5d6b85;">
+          Fecha de aprobación: ____________
+        </div>
+      </div>
+    </div>`;
+  }
+  return `<div style="margin-top:26px;display:flex;gap:30px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:180px;text-align:center;">
+      <div style="border-top:1.5px solid #888;padding-top:6px;font-size:11.5px;color:#5d6b85;">Firma del estudiante</div>
+    </div>
+    <div style="flex:1;min-width:180px;text-align:center;">
+      <div style="border-top:1.5px solid #888;padding-top:6px;font-size:11.5px;color:#5d6b85;">Firma del apoderado</div>
+    </div>
+  </div>`;
+}
+
+function paginaExamenHTML(examen, esDirector){
+  const titulo = esDirector
+    ? 'PRUEBA ESCRITA — VERSIÓN DOCENTE / PARA APROBACIÓN DE DIRECCIÓN'
+    : 'PRUEBA ESCRITA';
+  const banner = esDirector
+    ? `<div style="background:#7c1d2e;color:#fff;text-align:center;padding:7px;font-size:12px;font-weight:800;letter-spacing:.5px;border-radius:14px 14px 0 0;">⚠ CONTIENE CLAVE DE RESPUESTAS — USO EXCLUSIVO DOCENTE / DIRECCIÓN</div>`
+    : '';
+  const instrucciones = esDirector ? '' : `
+    <div style="background:#eef3fb;border:1px solid #cfdaf2;border-radius:8px;padding:10px 14px;margin-top:14px;font-size:12px;color:#1a2336;">
+      <b>Instrucciones:</b> Lee con atención cada pregunta. Responde con lapicero. No se permite el uso de borrador en las respuestas de desarrollo.
+    </div>`;
+  return `
+  <div style="font-family:'Plus Jakarta Sans',Arial,sans-serif;color:#1a2336;max-width:780px;margin:0 auto;">
+    ${banner}
+    ${construirEncabezado(examen.datos, titulo, '')}
+    ${instrucciones}
+    ${construirCuerpoExamen(examen, esDirector)}
+    ${construirPiePagina(examen.datos, esDirector)}
+  </div>`;
+}
+
+function renderExamen(examen){
+  const out = document.getElementById('examenOutput');
+  out.innerHTML = '';
+  out.style.display = 'block';
+
+  const wrapDir = document.createElement('div');
+  wrapDir.className = 'exam-wrap exam-page-director';
+  wrapDir.innerHTML = `<span class="exam-tag dir">📌 Vista previa — Versión Dirección (con respuestas)</span>
+    <div style="background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(21,57,122,0.10);padding:24px;">
+      ${paginaExamenHTML(examen, true)}
+    </div>`;
+
+  const wrapEst = document.createElement('div');
+  wrapEst.className = 'exam-wrap exam-page-estudiante';
+  wrapEst.innerHTML = `<span class="exam-tag est">📌 Vista previa — Versión Estudiante (vacía)</span>
+    <div style="background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(21,57,122,0.10);padding:24px;">
+      ${paginaExamenHTML(examen, false)}
+    </div>`;
+
+  out.appendChild(wrapDir);
+  out.appendChild(wrapEst);
+
+  document.getElementById('finalActions').style.display = 'block';
+  out.scrollIntoView({behavior:'smooth'});
+}
+
+// ════════════════════════════════════════════
+//  IMPRIMIR / PDF
+// ════════════════════════════════════════════
+function imprimir(version){
+  document.body.classList.remove('modo-print-director','modo-print-estudiante');
+  document.body.classList.add(version==='director'?'modo-print-director':'modo-print-estudiante');
+  window.print();
+}
+
+// ════════════════════════════════════════════
+//  EXPORTAR A WORD (.doc compatible con MS Word, sin dependencias externas)
+// ════════════════════════════════════════════
+function exportarWord(version){
+  if(!examenActual){ alert('Primero genera un examen.'); return; }
+  const esDirector = version==='director';
+  const contenidoHtml = paginaExamenHTML(examenActual, esDirector);
+  const nombreArchivo = `Examen_${esDirector?'Direccion':'Estudiante'}_${(examenActual.datos.materia||'materia').replace(/[^a-zA-Z0-9]/g,'_')}_${new Date().toISOString().slice(0,10)}.doc`;
+
+  const docHtml = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>Examen</title>
+<!--[if gte mso 9]>
+<xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml>
+<![endif]-->
+<style>
+  @page{ size:21.59cm 27.94cm; margin:2cm; }
+  body{ font-family:Calibri,Arial,sans-serif; }
+</style>
+</head>
+<body>${contenidoHtml}</body>
+</html>`;
+
+  const blob = new Blob(['\ufeff', docHtml], {type:'application/msword'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
+
+// ════════════════════════════════════════════
+//  EXPORTAR CLAVE DE RESPUESTAS A EXCEL
+// ════════════════════════════════════════════
+function exportarExcelClave(){
+  if(!examenActual){ alert('Primero genera un examen.'); return; }
+  const datos = examenActual.datos;
+  const wb = XLSX.utils.book_new();
+  const ws = {};
+  const merges = [];
+  let R = 0;
+
+  ws[XLSX.utils.encode_cell({r:R,c:0})] = {v:`CLAVE DE RESPUESTAS — ${datos.materia}`, t:'s',
+    s:{font:{bold:true,color:{rgb:'FFFFFF'},size:13},fill:{fgColor:{rgb:'15397A'}},alignment:{horizontal:'center'}}};
+  merges.push({s:{r:R,c:0},e:{r:R,c:3}});
+  R++;
+  ws[XLSX.utils.encode_cell({r:R,c:0})] = {v:`Docente: ${datos.docente}   Curso: ${datos.curso} ${datos.paralelo}   Periodo: ${datos.bimestre}`,t:'s',
+    s:{font:{size:8,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1D5BC2'}}}};
+  merges.push({s:{r:R,c:0},e:{r:R,c:3}});
+  R+=2;
+
+  ['#','Tipo','Pregunta / Enunciado','Respuesta correcta','Pts'].forEach((h,ci)=>{
+    ws[XLSX.utils.encode_cell({r:R,c:ci})] = {v:h,t:'s',
+      s:{font:{bold:true,color:{rgb:'FFFFFF'},size:9},fill:{fgColor:{rgb:'15397A'}},alignment:{horizontal:'center'}}};
+  });
+  R++;
+
+  const tipoLabel = {om:'Opción múltiple', vf:'Verdadero/Falso', comp:'Completar', des:'Desarrollo'};
+  examenActual.items.forEach((it,i)=>{
+    const rowBg = i%2===0?'FFFFFF':'EEF3FB';
+    let textoPregunta = it.pregunta||it.enunciado||'';
+    let respuesta = '';
+    if(it.type==='om') respuesta = String.fromCharCode(65+it.correcta)+') '+(it.opciones[it.correcta]||'');
+    else if(it.type==='vf') respuesta = it.correcta?'Verdadero':'Falso';
+    else if(it.type==='comp') respuesta = it.respuesta;
+    else respuesta = it.respuesta_modelo;
+
+    ws[XLSX.utils.encode_cell({r:R,c:0})] = {v:it.num,t:'n',s:{fill:{fgColor:{rgb:rowBg}},alignment:{horizontal:'center'}}};
+    ws[XLSX.utils.encode_cell({r:R,c:1})] = {v:tipoLabel[it.type],t:'s',s:{fill:{fgColor:{rgb:rowBg}}}};
+    ws[XLSX.utils.encode_cell({r:R,c:2})] = {v:textoPregunta,t:'s',s:{fill:{fgColor:{rgb:rowBg}},alignment:{wrapText:true}}};
+    ws[XLSX.utils.encode_cell({r:R,c:3})] = {v:respuesta,t:'s',s:{font:{bold:true,color:{rgb:'15803D'}},fill:{fgColor:{rgb:rowBg}},alignment:{wrapText:true}}};
+    ws[XLSX.utils.encode_cell({r:R,c:4})] = {v:it.pts,t:'n',s:{fill:{fgColor:{rgb:rowBg}},alignment:{horizontal:'center'}}};
+    R++;
+  });
+
+  ws['!cols']=[{wch:5},{wch:16},{wch:55},{wch:35},{wch:7}];
+  ws['!merges']=merges;
+  ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:R+1,c:4}});
+  XLSX.utils.book_append_sheet(wb, ws, 'Clave de respuestas');
+
+  XLSX.writeFile(wb, `Clave_Respuestas_${(datos.materia||'examen').replace(/[^a-zA-Z0-9]/g,'_')}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function resetForm(){
+  examenActual = null;
+  document.getElementById('examenOutput').innerHTML='';
+  document.getElementById('examenOutput').style.display='none';
+  document.getElementById('finalActions').style.display='none';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>

@@ -763,11 +763,11 @@
   <div class="intro-inner">
     <div class="section-header reveal">
       <span class="section-num">01</span>
-      <span class="section-title">— Bienvenido a la plataforma</span>
+      <span class="section-title">— Menos papeleo, más enseñanza</span>
     </div>
-    <h2 class="intro-h2 reveal">Bienvenido a nuestra<br><em>plataforma educativa</em></h2>
+    <h2 class="intro-h2 reveal">Tu tiempo vale.<br><em>Úsalo en lo que importa.</em></h2>
     <p class="intro-body reveal">
-      Un espacio diseñado para apoyar el trabajo docente mediante herramientas que facilitan la planificación, evaluación y organización pedagógica. Aquí encontrarás recursos como la generación automática de Planes de Desarrollo Curricular (PDC), rúbricas de evaluación, listas de cotejo, instrumentos de seguimiento, documentos pedagógicos y otras utilidades orientadas a optimizar el tiempo del profesor. Si tienes consultas, sugerencias o requieres asistencia personalizada, puedes comunicarte con nosotros de manera rápida y directa a través de WhatsApp, donde estaremos disponibles para brindarte apoyo y orientación en el uso de nuestros servicios.
+      Como docentes sabemos que las horas del día nunca alcanzan. Por eso creamos herramientas que hacen en segundos lo que antes te llevaba horas: PDCs, rúbricas, listas de cotejo, exámenes y más. Menos tiempo frente a la hoja en blanco, más tiempo frente a tus estudiantes. Porque el aula te necesita a vos, no al papeleo.
     </p>
   </div>
 </section>
@@ -818,6 +818,20 @@
       <p class="tool-index">04</p>
       <h2 class="tool-name">Subir notas<br>a SIE</h2>
       <p class="tool-desc">Genera un script que subirá tus notas automáticamente al sistema SIE.</p>
+      <div class="tool-arrow"></div>
+    </a>
+    <a class="tool-card reveal" href="crucigrama.html" style="transition-delay:.2s">
+      <img class="tool-img" src="cru.jpg" alt="Subir notas" />
+      <p class="tool-index">05</p>
+      <h2 class="tool-name">Crucigrama con<br>IA</h2>
+      <p class="tool-desc">Genera crucigramas para clases con IA.</p>
+      <div class="tool-arrow"></div>
+    </a>
+    <a class="tool-card reveal" href="examen.html" style="transition-delay: ;y:.2s">
+      <img class="tool-img" src="evaluacion.jpg" alt="Subir notas" />
+      <p class="tool-index">06</p>
+      <h2 class="tool-name">crea tus examenes<br>automaticos con IA</h2>
+      <p class="tool-desc">Elabora de forma rapida un examen de cualquier materia en un instante</p>
       <div class="tool-arrow"></div>
     </a>
   </div>
@@ -944,27 +958,19 @@
   const WA_MESSAGE = encodeURIComponent('¡Hola PC REVIVE! Me comunico desde su página. ¿Podría darme más información sobre sus servicios?');
   document.getElementById('waBtn').href = `https://wa.me/${WA_NUMBER}?text=${WA_MESSAGE}`;
 
-  /* ══════════════════════════════════════
-     CALI — Widget IA voz
-     - Permiso mic se pide UNA sola vez
-     - Mic queda activo mientras panel abierto
-     - Al terminar de hablar reactiva solo
-  ══════════════════════════════════════ */
+  // CALI
   (function(){
-    const _k = atob('Z3NrX05XWEJkalNNc3JWdXQ1SHJ3ZUowV0dkeWIzRllUQjllOEtBTGpOT1pSUE5iV1NGUnBWbWs');
+    const MENSAJES = [
+      "¡Hola, profe! Bienvenido a PC Revive, tu plataforma educativa para docentes bolivianos.",
+      "Acá podés crear PDCs, rúbricas de evaluación, listas de cotejo, crucigramas con inteligencia artificial y exámenes automáticos.",
+      "También podés subir tus notas al sistema SIE de forma automática con un solo clic.",
+      "Todo fue diseñado por profesores bolivianos, para profesores bolivianos. ¡Explorá las herramientas y simplificá tu trabajo!"
+    ];
 
-    const PROMPT = `Eres CALI, asistente educativa virtual de PC REVIVE para docentes bolivianos.
-Respondés en español boliviano, amigable y claro. Máximo 3 oraciones porque se convierte a voz.
-Ayudás con PDCs, rúbricas, listas de cotejo, notas SIE y dudas pedagógicas del currículo boliviano.
-Siempre terminás con una pregunta o invitación a continuar.`;
-
-    let history     = [];
-    let isListening = false;
-    let isSpeaking  = false;
-    let bestVoice   = null;
-    let recognition = null;
-    let panelOpen   = false;
-    let micAllowed  = false;
+    let panelOpen = false;
+    let isSpeaking = false;
+    let bestVoice = null;
+    let msgIndex = 0;
 
     function loadVoice(){
       const vs = speechSynthesis.getVoices();
@@ -980,66 +986,6 @@ Siempre terminás con una pregunta o invitación a continuar.`;
     speechSynthesis.onvoiceschanged = loadVoice;
     loadVoice();
 
-    async function pedirPermisoYArrancar(){
-      if(micAllowed){ arrancarMic(); return; }
-      setStatus('Activando...','#ffe600');
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(t => t.stop());
-        micAllowed = true;
-        setupRecog();
-        arrancarMic();
-      } catch(e){
-        setStatus('Sin micrófono','#ff4466');
-        addMsg('cali','No tengo acceso al micrófono. Permitilo en el candado del navegador.');
-      }
-    }
-
-    function setupRecog(){
-      if(recognition) return;
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if(!SR){ addMsg('cali','Tu navegador no soporta voz. Usá Chrome o Edge.'); return; }
-      recognition = new SR();
-      recognition.lang = 'es-BO';
-      recognition.continuous = false;
-      recognition.interimResults = false;
-
-      recognition.onstart = () => {
-        isListening = true;
-        document.getElementById('cali-mic-btn').classList.add('listening');
-        document.getElementById('cali-mic-label').textContent = 'Escuchando...';
-        setStatus('Escuchando','#ff4466');
-      };
-      recognition.onresult = e => {
-        const text = e.results[0][0].transcript;
-        addMsg('user', text);
-        pararMic();
-        askCali(text);
-      };
-      recognition.onerror = () => { pararMic(); };
-      recognition.onend = () => {
-        isListening = false;
-        // NO se reactiva solo — el profe presiona el botón cuando quiere hablar
-        document.getElementById('cali-mic-btn').classList.remove('listening');
-        if(!isSpeaking) setStatus('Lista — presioná 🎙️','#00e5ff');
-      };
-    }
-
-    function arrancarMic(){
-      if(!recognition || isListening || isSpeaking || !panelOpen) return;
-      try { recognition.start(); } catch(e){}
-    }
-
-    function pararMic(){
-      isListening = false;
-      if(recognition) try{ recognition.stop(); }catch(e){}
-      const btn = document.getElementById('cali-mic-btn');
-      if(btn) btn.classList.remove('listening');
-      const lbl = document.getElementById('cali-mic-label');
-      if(lbl) lbl.textContent = 'Presioná el mic para hablar';
-      setStatus('Lista','#00e5ff');
-    }
-
     window.toggleCali = function(){
       panelOpen = !panelOpen;
       const panel = document.getElementById('cali-panel');
@@ -1047,61 +993,57 @@ Siempre terminás con una pregunta o invitación a continuar.`;
       if(panelOpen){
         panel.classList.add('open');
         img.style.boxShadow = '0 0 30px rgba(0,229,255,0.9)';
-        if(history.length === 0) addMsg('cali','¡Hola! Soy CALI, tu asistente educativa de PC REVIVE. ¿En qué puedo ayudarte hoy?');
-        pedirPermisoYArrancar();
+        if(document.getElementById('cali-messages').children.length === 0){
+          addMsg('cali', '¡Hola, profe! Soy CALI. Presioná el botón para escuchar sobre las herramientas.');
+        }
       } else {
         panel.classList.remove('open');
         img.style.boxShadow = '0 0 18px rgba(0,229,255,0.5)';
-        pararMic();
         speechSynthesis.cancel();
         isSpeaking = false;
+        msgIndex = 0;
+        setStatus('Lista','#00e5ff');
       }
     };
 
     window.toggleMic = function(){
-      if(isSpeaking) return;
-      if(isListening){ pararMic(); }
-      else { arrancarMic(); }
+      if(isSpeaking){
+        speechSynthesis.cancel();
+        isSpeaking = false;
+        document.getElementById('cali-mic-btn').classList.remove('listening');
+        document.getElementById('cali-mic-label').textContent = 'Presioná para escuchar de nuevo';
+        setStatus('Lista','#00e5ff');
+        return;
+      }
+      msgIndex = 0;
+      hablarSiguiente();
     };
 
-    async function askCali(msg){
-      setStatus('Pensando...','#ffe600');
-      history.push({ role:'user', content:msg });
-      try {
-        const res = await fetch('https://api.groq.com/openai/v1/chat/completions',{
-          method:'POST',
-          headers:{ 'Content-Type':'application/json','Authorization':'Bearer '+_k },
-          body: JSON.stringify({
-            model:'llama-3.3-70b-versatile',
-            max_tokens:180, temperature:0.7,
-            messages:[{ role:'system',content:PROMPT },...history]
-          })
-        });
-        const data = await res.json();
-        const reply = data.choices[0].message.content.trim();
-        history.push({ role:'assistant',content:reply });
-        addMsg('cali', reply);
-        speak(reply);
-      } catch(e){
-        addMsg('cali','Error de conexión. Verificá tu internet.');
-        setStatus('Error','#ff4466');
-        if(panelOpen) setTimeout(()=>{ if(panelOpen && !isSpeaking) arrancarMic(); },1000);
+    function hablarSiguiente(){
+      if(msgIndex >= MENSAJES.length){
+        msgIndex = 0;
+        isSpeaking = false;
+        document.getElementById('cali-mic-btn').classList.remove('listening');
+        document.getElementById('cali-mic-label').textContent = 'Presioná para escuchar de nuevo';
+        setStatus('Lista','#00e5ff');
+        return;
       }
+      const texto = MENSAJES[msgIndex++];
+      addMsg('cali', texto);
+      speak(texto, hablarSiguiente);
     }
 
-    function speak(text){
+    function speak(text, onEnd){
       isSpeaking = true;
-      setStatus('Hablando','#ffe600');
+      setStatus('Hablando...','#ffe600');
+      document.getElementById('cali-mic-btn').classList.add('listening');
+      document.getElementById('cali-mic-label').textContent = 'Hablando... (presioná para parar)';
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang='es-419'; u.rate=0.92; u.pitch=1.05;
+      u.lang='es-419'; u.rate=0.9; u.pitch=1.05;
       if(bestVoice) u.voice = bestVoice;
-      u.onend = () => {
-        isSpeaking = false;
-        setStatus('Lista — presioná 🎙️','#00e5ff');
-        // NO reactiva el mic solo — evita el popup de permisos
-      };
-      u.onerror = () => { isSpeaking=false; setStatus('Lista — presioná 🎙️','#00e5ff'); };
+      u.onend = () => { if(isSpeaking) onEnd && onEnd(); };
+      u.onerror = () => { isSpeaking=false; setStatus('Lista','#00e5ff'); };
       speechSynthesis.speak(u);
     }
 
@@ -1109,8 +1051,8 @@ Siempre terminás con una pregunta o invitación a continuar.`;
       const box = document.getElementById('cali-messages');
       if(!box) return;
       const div = document.createElement('div');
-      div.className = 'cali-msg '+role;
-      div.innerHTML = '<span class="cali-msg-label">'+(role==='cali'?'CALI':'VOS')+'</span><span class="cali-msg-text">'+text+'</span>';
+      div.className = 'cali-msg ' + role;
+      div.innerHTML = '<span class="cali-msg-label">CALI</span><span class="cali-msg-text">'+text+'</span>';
       box.appendChild(div);
       box.scrollTop = box.scrollHeight;
     }

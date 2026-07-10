@@ -4,7 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>PC REVIVE – Herramientas Educativas</title>
-  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Barlow:wght@100;200;300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Barlow:wght@100;200;300;400;500&family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Sora:wght@400;500;600&display=swap" rel="stylesheet"/>
   <style>
     :root {
       --yellow:  #ffe600;
@@ -15,6 +16,15 @@
       --line:    rgba(255,255,255,0.08);
       --cyan:    #00e5ff;
       --green:   #00ffb3;
+
+      --room-dark:#08070c;
+      --room-dim:#141220;
+      --lamp-cream:#f2e8d5;
+      --lamp-shadow:#c9bc9c;
+      --light-warm:#ffd79a;
+      --light-hot:#fff6e0;
+      --amber:#ffb64d;
+      --text-soft:#cfc7d8;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -107,6 +117,7 @@
     }
     .nav-links {
       display: flex;
+      align-items: center;
       gap: 40px;
       list-style: none;
     }
@@ -129,6 +140,21 @@
     }
     .nav-links a:hover { color: #fff; }
     .nav-links a:hover::after { width: 100%; }
+    .nav-logout{
+      background: rgba(255,230,0,.08);
+      border: 1px solid rgba(255,230,0,.3);
+      color: var(--yellow);
+      padding: 7px 16px;
+      border-radius: 999px;
+      font-family:'Rajdhani', sans-serif;
+      font-size: 11px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .nav-logout:hover{ background: rgba(255,230,0,.18); }
 
     section { position: relative; z-index: 2; }
 
@@ -707,6 +733,363 @@
     }
     @keyframes micPulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,68,102,0.4);}50%{box-shadow:0 0 0 8px rgba(255,68,102,0);} }
     #cali-mic-label { font-size: 11px; color: rgba(255,255,255,0.4); letter-spacing: 1px; }
+
+    /* ══════════════════════════════════════════════════
+       LOCK SCREEN — LÁMPARA (contraseña + clave IA)
+    ══════════════════════════════════════════════════ */
+    #lockScreen{
+      position:fixed;
+      inset:0;
+      z-index: 100000;
+      background:radial-gradient(ellipse at 50% 15%, var(--room-dim) 0%, var(--room-dark) 70%);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+      font-family:'Sora', sans-serif;
+      cursor:auto;
+    }
+    #lockScreen::after{
+      content:'';
+      position:absolute;
+      bottom:0; left:0; right:0;
+      height:35%;
+      background:linear-gradient(to top, rgba(0,0,0,0.55), transparent);
+      pointer-events:none;
+      z-index:2;
+    }
+    .stage{
+      position:relative;
+      width:100%;
+      max-width:480px;
+      height:100vh;
+      max-height:920px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+    }
+    .ambient{
+      position:absolute;
+      top:0;
+      left:50%;
+      transform:translateX(-50%);
+      width:900px;
+      height:900px;
+      background:radial-gradient(circle at 50% 12%, rgba(255,205,130,0.35) 0%, rgba(255,190,110,0.14) 22%, rgba(255,170,90,0.05) 40%, transparent 62%);
+      opacity:0;
+      transition:opacity 1.1s ease;
+      pointer-events:none;
+      z-index:0;
+      filter:blur(2px);
+    }
+    .lit .ambient{ opacity:1; }
+    .lit.flicker .ambient{ animation:flick 0.5s steps(1) 1; }
+
+    .lamp{
+      position:relative;
+      margin-top:6vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      z-index:5;
+    }
+    .lamp-shade{
+      width:170px;
+      height:95px;
+      background:linear-gradient(180deg, #fbf6ea 0%, var(--lamp-cream) 60%, var(--lamp-shadow) 100%);
+      border-radius:50% 50% 8px 8px / 100% 100% 12px 12px;
+      box-shadow:
+        inset 0 -10px 18px rgba(0,0,0,0.12),
+        0 6px 10px rgba(0,0,0,0.4);
+      position:relative;
+      transition:box-shadow .6s ease, filter .6s ease;
+    }
+    .lamp-shade::after{
+      content:'';
+      position:absolute;
+      left:50%; bottom:-3px;
+      transform:translateX(-50%);
+      width:14px; height:14px;
+      background:#b8ac8d;
+      border-radius:3px;
+    }
+    .lamp.on .lamp-shade{
+      box-shadow:
+        inset 0 -16px 34px rgba(255,214,150,0.7),
+        0 0 40px 14px rgba(255,205,130,0.7),
+        0 0 100px 46px rgba(255,180,100,0.42),
+        0 0 220px 90px rgba(255,160,80,0.18);
+      filter:brightness(1.18);
+    }
+    .lamp.flicker .lamp-shade{ animation:flick 0.5s steps(1) 1; }
+    @keyframes flick{
+      0%{ filter:brightness(0.3); }
+      8%{ filter:brightness(1.2); }
+      16%{ filter:brightness(0.4); }
+      26%{ filter:brightness(1.3); }
+      38%{ filter:brightness(0.6); }
+      55%{ filter:brightness(1.15); }
+      100%{ filter:brightness(1.18); }
+    }
+    .lamp-pole{
+      width:8px;
+      height:130px;
+      background:linear-gradient(90deg, #8b8378, #d6cdb8, #8b8378);
+      margin-top:-4px;
+    }
+    .lamp-base{
+      width:70px;
+      height:12px;
+      background:linear-gradient(180deg, #cabf9e, #8b8378);
+      border-radius:50%;
+    }
+    .cord-zone{
+      position:absolute;
+      top:88px;
+      left:calc(50% + 66px);
+      width:60px;
+      height:180px;
+      z-index:6;
+    }
+    .cord{
+      position:absolute;
+      top:0;
+      left:0;
+      width:2px;
+      height:120px;
+      background:linear-gradient(180deg, #b8ad9a, #8f8574);
+      transform-origin:top center;
+      transform:translateY(0) rotate(0deg);
+      transition:transform .55s cubic-bezier(.34,1.56,.64,1);
+    }
+    .cord.dragging{ transition:none; }
+    .cord.swing{ animation:swing 0.85s ease-out; }
+    @keyframes swing{
+      0%{transform:translateY(0) rotate(0deg);}
+      20%{transform:translateY(0) rotate(11deg);}
+      45%{transform:translateY(0) rotate(-7deg);}
+      65%{transform:translateY(0) rotate(4deg);}
+      85%{transform:translateY(0) rotate(-2deg);}
+      100%{transform:translateY(0) rotate(0deg);}
+    }
+    .cord-pull{
+      position:absolute;
+      top:112px;
+      left:50%;
+      transform:translateX(-50%);
+      width:22px;
+      height:22px;
+      background:radial-gradient(circle at 35% 30%, #ece3ce, #b8ac8d);
+      border-radius:50% 50% 45% 45%;
+      box-shadow:0 2px 6px rgba(0,0,0,0.5);
+      cursor:grab;
+      touch-action:none;
+    }
+    .cord-pull:active{ cursor:grabbing; }
+    .cord-hint{
+      position:absolute;
+      top:170px;
+      left:50%;
+      transform:translateX(-50%);
+      font-size:10.5px;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:#726a80;
+      white-space:nowrap;
+      opacity:1;
+      transition:opacity .5s ease;
+      pointer-events:none;
+      text-align:center;
+      width:120px;
+    }
+    .lit .cord-hint{ opacity:0; }
+    .switch-btn{
+      position:relative;
+      z-index:6;
+      margin-top:26px;
+      padding:9px 22px;
+      border-radius:999px;
+      border:1px solid rgba(255,214,150,0.25);
+      background:rgba(255,255,255,0.04);
+      color:#d8cdb8;
+      font-family:'Sora', sans-serif;
+      font-size:12px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      cursor:pointer;
+      transition:all .3s ease;
+    }
+    .switch-btn:hover{
+      border-color:rgba(255,214,150,0.5);
+      background:rgba(255,214,150,0.08);
+      color:var(--light-hot);
+    }
+    .lit .switch-btn{
+      border-color:rgba(255,214,150,0.4);
+      background:rgba(255,214,150,0.1);
+      color:var(--light-hot);
+    }
+    .light-cone{
+      position:absolute;
+      top:80px;
+      left:50%;
+      transform:translateX(-50%);
+      width:70px;
+      height:0;
+      background:
+        linear-gradient(180deg,
+          rgba(255,241,207,0.6) 0%,
+          rgba(255,220,160,0.32) 35%,
+          rgba(255,200,130,0.12) 65%,
+          rgba(255,190,120,0) 100%);
+      clip-path:polygon(38% 0%, 62% 0%, 100% 100%, 0% 100%);
+      opacity:0;
+      transition:opacity .3s ease;
+      pointer-events:none;
+      z-index:1;
+      mix-blend-mode:screen;
+    }
+    .lit .light-cone{
+      opacity:1;
+      height:560px;
+      width:520px;
+      transition:height 1s cubic-bezier(.16,.84,.24,1), width 1s cubic-bezier(.16,.84,.24,1), opacity .3s ease;
+    }
+    .floor-glow{
+      position:absolute;
+      top:560px;
+      left:50%;
+      transform:translateX(-50%);
+      width:420px;
+      height:120px;
+      background:radial-gradient(ellipse, rgba(255,210,140,0.28) 0%, rgba(255,190,110,0.08) 55%, transparent 80%);
+      opacity:0;
+      transition:opacity 1s ease .3s;
+      pointer-events:none;
+      z-index:1;
+    }
+    .lit .floor-glow{ opacity:1; }
+    .login-wrap{
+      position:relative;
+      margin-top:34px;
+      z-index:4;
+    }
+    .login-card{
+      width:300px;
+      padding:34px 30px 30px;
+      border-radius:16px;
+      background:rgba(20,17,26,0.55);
+      border:1px solid rgba(255,214,150,0.08);
+      text-align:center;
+      opacity:0;
+      transform:translateY(14px) scale(.97);
+      filter:blur(2px);
+      transition:opacity .7s ease .15s, transform .7s ease .15s, filter .7s ease .15s, border-color .7s ease .15s, box-shadow .7s ease .15s;
+      pointer-events:none;
+      backdrop-filter:blur(2px);
+    }
+    .lit .login-card{
+      opacity:1;
+      transform:translateY(0) scale(1);
+      filter:blur(0);
+      pointer-events:auto;
+      border-color:rgba(255,214,150,0.2);
+      box-shadow:0 0 60px rgba(255,190,110,0.16), inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+    .login-card h1{
+      font-family:'Fraunces', serif;
+      font-weight:600;
+      font-size:26px;
+      color:var(--light-hot);
+      margin:0 0 4px;
+      letter-spacing:.01em;
+    }
+    .login-card p.sub{
+      margin:0 0 26px;
+      font-size:12.5px;
+      color:var(--text-soft);
+      letter-spacing:.04em;
+    }
+    .field{ text-align:left; margin-bottom:16px; }
+    .field label{
+      display:block;
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      color:#a99bb5;
+      margin-bottom:6px;
+    }
+    .field input{
+      width:100%;
+      padding:11px 13px;
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,214,150,0.15);
+      border-radius:8px;
+      color:#f5efe0;
+      font-family:'Sora', sans-serif;
+      font-size:14px;
+      outline:none;
+      transition:border-color .25s ease, box-shadow .25s ease, background .25s ease;
+    }
+    .field input::placeholder{ color:#6f6779; }
+    .field input:focus{
+      border-color:var(--amber);
+      background:rgba(255,214,150,0.06);
+      box-shadow:0 0 0 3px rgba(255,182,77,0.12);
+    }
+    .signin-btn{
+      width:100%;
+      margin-top:8px;
+      padding:12px;
+      border:none;
+      border-radius:8px;
+      background:linear-gradient(180deg, #ffd898, var(--amber));
+      color:#251a08;
+      font-family:'Sora', sans-serif;
+      font-weight:600;
+      font-size:14px;
+      letter-spacing:.03em;
+      cursor:pointer;
+      transition:transform .15s ease, box-shadow .25s ease;
+    }
+    .signin-btn:hover{
+      transform:translateY(-1px);
+      box-shadow:0 6px 18px rgba(255,182,77,0.35);
+    }
+    .signin-btn:active{ transform:translateY(0); }
+    .lock-err{
+      min-height:18px;
+      margin-top:10px;
+      font-size:12px;
+      color:#ff8a8a;
+      letter-spacing:.02em;
+    }
+    .footnote{
+      margin-top:14px;
+      font-size:11px;
+      color:#867c95;
+      line-height:1.6;
+    }
+    .dark-hint{
+      position:relative;
+      margin-top:auto;
+      margin-bottom:6vh;
+      font-size:11px;
+      color:#4c4557;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+      transition:opacity .5s ease;
+      z-index:3;
+    }
+    .lit .dark-hint{ opacity:0; }
+
+    @media (prefers-reduced-motion: reduce){
+      .cord.swing, .lamp.flicker .lamp-shade, .flicker .ambient{ animation:none; }
+      .light-cone, .login-card, .ambient{ transition:opacity .3s linear !important; transform:none !important; }
+    }
+    @media (max-width:420px){
+      .cord-zone{ left:calc(50% + 50px); }
+    }
   </style>
 </head>
 <body>
@@ -715,6 +1098,62 @@
 <div id="cursor-ring"></div>
 <div id="grid-bg" aria-hidden="true"></div>
 
+<!-- ══════════════════════════════════════════
+     LOCK SCREEN — LÁMPARA
+═══════════════════════════════════════════ -->
+<div id="lockScreen">
+  <div class="stage" id="stage">
+
+    <div class="ambient"></div>
+
+    <div class="lamp" id="lamp">
+      <div class="lamp-shade" id="shade"></div>
+      <div class="lamp-pole"></div>
+      <div class="lamp-base"></div>
+    </div>
+
+    <div class="cord-zone">
+      <div class="cord" id="cord">
+        <div class="cord-pull" id="pull"></div>
+      </div>
+      <div class="cord-hint">jala o toca</div>
+    </div>
+
+    <div class="light-cone" id="cone"></div>
+    <div class="floor-glow"></div>
+
+    <button class="switch-btn" id="switchBtn" type="button">Encender lámpara</button>
+
+    <div class="login-wrap">
+      <div class="login-card" id="card">
+        <h1>PC REVIVE</h1>
+        <p class="sub">Acceso a herramientas docentes</p>
+        <form onsubmit="return false;">
+          <div class="field">
+            <label for="pass1">Contraseña</label>
+            <input id="pass1" type="password" placeholder="Contraseña de acceso">
+          </div>
+          <div class="field">
+            <label for="pass2">Clave de la IA</label>
+            <input id="pass2" type="password" placeholder="gsk_xxxxxxxxxxxxxxxxxxxx">
+          </div>
+          <button class="signin-btn" type="submit" onclick="unlock()">Entrar</button>
+          <div class="lock-err" id="lockErr"></div>
+        </form>
+        <p class="footnote">Válido solo para docentes autorizados.<br>Bolivia · 2026</p>
+      </div>
+    </div>
+
+    <div class="dark-hint" id="hint">la habitación está a oscuras</div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SITIO PRINCIPAL (oculto hasta desbloquear)
+═══════════════════════════════════════════ -->
+<div id="app" style="display:none;">
+
 <!-- NAV -->
 <nav id="nav">
   <a href="#" class="nav-logo">PC<span style="color:#fff;font-weight:100"> REVIVE</span></a>
@@ -722,6 +1161,7 @@
     <li><a href="#tools">Herramientas</a></li>
     <li><a href="#services">Servicios</a></li>
     <li><a href="#contact">Contacto</a></li>
+    <li><button class="nav-logout" onclick="logout()">Salir</button></li>
   </ul>
 </nav>
 
@@ -913,7 +1353,143 @@
   </div>
 </div>
 
+</div><!-- /app -->
+
 <script>
+  // ══════════════════════════════════════════
+  // LOCK SCREEN — LÁMPARA + VALIDACIÓN
+  // ══════════════════════════════════════════
+  const PASS_CORRECTA = 'pdc2026';
+
+  const stage = document.getElementById('stage');
+  const lamp = document.getElementById('lamp');
+  const cord = document.getElementById('cord');
+  const pull = document.getElementById('pull');
+  const switchBtn = document.getElementById('switchBtn');
+  let lampOn = false;
+  let dragging = false;
+  let startY = 0;
+  let currentPull = 0;
+  const MAX_PULL = 34;
+
+  function toggleLamp(){
+    lampOn = !lampOn;
+    lamp.classList.toggle('on', lampOn);
+    stage.classList.toggle('lit', lampOn);
+    switchBtn.textContent = lampOn ? 'Apagar lámpara' : 'Encender lámpara';
+
+    if(lampOn){
+      stage.classList.add('flicker');
+      lamp.classList.add('flicker');
+      setTimeout(() => {
+        stage.classList.remove('flicker');
+        lamp.classList.remove('flicker');
+      }, 520);
+    }
+  }
+
+  function playSwing(){
+    cord.classList.remove('swing');
+    void cord.offsetWidth;
+    cord.classList.add('swing');
+  }
+
+  pull.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    startY = e.clientY;
+    currentPull = 0;
+    cord.classList.add('dragging');
+    pull.setPointerCapture(e.pointerId);
+  });
+
+  pull.addEventListener('pointermove', (e) => {
+    if(!dragging) return;
+    const delta = Math.max(0, e.clientY - startY);
+    currentPull = Math.min(delta, MAX_PULL);
+    const rotate = currentPull / MAX_PULL * 8;
+    cord.style.transform = `translateY(${currentPull}px) rotate(${rotate}deg)`;
+  });
+
+  function endDrag(){
+    if(!dragging) return;
+    dragging = false;
+    cord.classList.remove('dragging');
+    cord.style.transform = '';
+    toggleLamp();
+    playSwing();
+    currentPull = 0;
+  }
+  pull.addEventListener('pointerup', endDrag);
+  pull.addEventListener('pointercancel', endDrag);
+
+  switchBtn.addEventListener('click', () => {
+    toggleLamp();
+    playSwing();
+  });
+
+  // Encender la lámpara automáticamente la primera vez que el usuario
+  // toca un campo, para que no escriba a oscuras.
+  ['pass1','pass2'].forEach(id=>{
+    document.getElementById(id).addEventListener('focus', ()=>{
+      if(!lampOn){ toggleLamp(); playSwing(); }
+    });
+  });
+
+  function unlock(){
+    const p1  = document.getElementById('pass1').value.trim();
+    const p2  = document.getElementById('pass2').value.trim();
+    const err = document.getElementById('lockErr');
+
+    if(p1 !== PASS_CORRECTA){
+      err.textContent = 'Contraseña incorrecta.';
+      return;
+    }
+    if(p2.length < 20){
+      err.textContent = 'Ingresa una Clave de la IA válida.';
+      return;
+    }
+
+    err.textContent = '';
+
+    // Se guarda SOLO para esta pestaña/sesión del navegador.
+    // Al cerrar la pestaña o el navegador se borra automáticamente.
+    sessionStorage.setItem('pcrevive_auth', 'ok');
+    sessionStorage.setItem('pcrevive_groq_key', p2);
+
+    const lockScreen = document.getElementById('lockScreen');
+    lockScreen.style.transition = 'opacity .6s ease';
+    lockScreen.style.opacity = '0';
+    setTimeout(()=>{
+      lockScreen.style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      document.body.style.cursor = 'none';
+    }, 600);
+  }
+
+  document.addEventListener('keydown', e=>{
+    if(e.key === 'Enter' && document.getElementById('lockScreen').style.display !== 'none'){
+      unlock();
+    }
+  });
+
+  function logout(){
+    sessionStorage.removeItem('pcrevive_auth');
+    sessionStorage.removeItem('pcrevive_groq_key');
+    location.reload();
+  }
+
+  // Si ya hay sesión activa en esta pestaña (venís de otra herramienta
+  // y volviste a la principal), saltamos directo al sitio.
+  window.addEventListener('DOMContentLoaded', () => {
+    if(sessionStorage.getItem('pcrevive_auth') === 'ok' && sessionStorage.getItem('pcrevive_groq_key')){
+      document.getElementById('lockScreen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+    }
+  });
+
+  // ══════════════════════════════════════════
+  // SITIO PRINCIPAL (cursor, grid, nav, reveal, whatsapp, CALI)
+  // ══════════════════════════════════════════
   // cursor
   const cursor = document.getElementById('cursor');
   const ring   = document.getElementById('cursor-ring');

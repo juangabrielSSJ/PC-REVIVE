@@ -146,7 +146,7 @@ body{font-family:'Source Serif 4',serif;background:#1a1a2e;color:#eee}
 .tbl-adap th{background:#1a3a6b;color:#fff;padding:4px;text-align:center;font-size:7pt;border:1px solid #333}
 .tbl-adap td{border:1px solid #333;padding:4px 6px;vertical-align:top;font-size:7.5pt;line-height:1.3}
 .etq-adap{background:#f0f4ff;font-weight:bold;text-align:center;font-size:7pt}
-.firmas{display:flex;justify-content:space-around;margin-top:14px;padding-top:6px}
+.firmas{display:flex;justify-content:space-around;margin-top:50px;padding-top:20px}
 .firma-b{text-align:center;width:42%}
 .firma-l{border-top:1px solid #333;margin-bottom:3px}
 .firma-t{font-size:7.5pt;font-style:italic}

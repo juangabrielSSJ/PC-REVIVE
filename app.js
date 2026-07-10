@@ -14,41 +14,27 @@ function actualizarParalelos(){
   actualizarEstudiantes();
 }
 
-function intentarLogin(){
-  const pass  = document.getElementById('inp-pass').value.trim();
-  const api   = document.getElementById('inp-apikey').value.trim();
-  const errEl = document.getElementById('login-err');
-  errEl.style.display = 'none';
+// ── SESIÓN (viene de index.html vía sessionStorage) ──
+function verificarSesion(){
+  const auth = sessionStorage.getItem('pcrevive_auth');
+  const key  = sessionStorage.getItem('pcrevive_groq_key');
 
-  const hashIngresado = btoa(pass + 'pdc_salt_2026');
-  if(btoa('pdc2026' + 'pdc_salt_2026') !== hashIngresado){
-    errEl.style.display = 'block';
-    errEl.textContent = '⚠️ Contraseña incorrecta.';
-    return;
+  if(auth === 'ok' && key){
+    API_KEY = key;
+    document.getElementById('pantalla-login').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    actualizarEstudiantes();
+  } else {
+    const msg = document.getElementById('sesion-msg');
+    if(msg) msg.textContent = 'No hay sesión activa. Redirigiendo a la página principal...';
+    setTimeout(()=>{ window.location.href = 'index.html'; }, 900);
   }
-
-  if(!api.startsWith('gsk_')){
-    errEl.style.display = 'block';
-    errEl.textContent = '⚠️ La API Key debe comenzar con "gsk_".';
-    return;
-  }
-
-  API_KEY = api;
-  document.getElementById('pantalla-login').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  actualizarEstudiantes();
 }
 
-document.addEventListener('keydown', e=>{
-  if(e.key==='Enter' && document.getElementById('pantalla-login').style.display!=='none') intentarLogin();
-});
 function cerrarSesion(){
-  API_KEY="";
-  document.getElementById('inp-pass').value='';
-  document.getElementById('inp-apikey').value='';
-  document.getElementById('pantalla-login').style.display='flex';
-  document.getElementById('app').style.display='none';
-  document.getElementById('login-err').style.display='none';
+  sessionStorage.removeItem('pcrevive_auth');
+  sessionStorage.removeItem('pcrevive_groq_key');
+  window.location.href = 'index.html';
 }
 
 
@@ -1526,6 +1512,5 @@ function ocultarLoading(){ document.getElementById('loading').classList.remove('
 
 // Inicializar al cargar
 window.addEventListener('load', ()=>{
-  // Pre-llenar paralelos disponibles según grado
-  actualizarEstudiantes();
+  verificarSesion();
 });

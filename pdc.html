@@ -14,7 +14,7 @@
 </head>
 <body>
 
-<!-- ══ LOGIN ══ -->
+<!-- ══ VERIFICANDO SESIÓN (viene de index.html) ══ -->
 <div id="pantalla-login">
   <div class="login-bg-text">PDC</div>
   <div class="login-card">
@@ -23,19 +23,8 @@
       <h1>PDC Bolivia 2026</h1>
       <p>Generador Profesional con Inteligencia Artificial</p>
     </div>
-    <div class="login-campo">
-      <label>🔐 Contraseña de acceso</label>
-      <input type="password" id="inp-pass" placeholder="Ingrese la contraseña" autocomplete="off">
-    </div>
-    <div class="login-campo">
-      <label>INTRODUCE EL CODIGO IA QUE TE ENVIARON</label>
-      <input type="password" id="inp-apikey" placeholder="gsk_..." autocomplete="off">
-    </div>
-    <button class="btn-login" onclick="intentarLogin()">Ingresar al Sistema →</button>
-    <div class="login-error" id="login-err">⚠️ Contraseña incorrecta. Intente de nuevo.</div>
-    <div class="login-nota">
-      
-      Sistema de uso educativo · Bolivia 2026
+    <div class="login-nota" id="sesion-msg" style="margin-top:14px;font-size:13px;color:rgba(255,255,255,.6)">
+      Verificando sesión...
     </div>
   </div>
 </div>

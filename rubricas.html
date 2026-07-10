@@ -314,25 +314,12 @@ table.rubrica tr:nth-child(even) td{background:#f8fdfb;}
 <body>
 
 <!-- ══════════════════════════════════════════
-     PANTALLA DE CONTRASEÑA
+     VERIFICANDO SESIÓN (viene de index.html)
 ═══════════════════════════════════════════ -->
 <div id="lockScreen">
   <div class="lock-card">
     <div class="lock-logo"> PC REVIVE<br/><small style="font-size:.9rem;font-family:'Plus Jakarta Sans',sans-serif;font-weight:400;opacity:.7">Rúbricas de Evaluación</small></div>
-    <div class="lock-sub">Acceso docente — Bolivia 2026</div>
-
-    <div class="field">
-      <label class="lock-label">Contraseña de acceso</label>
-      <input class="lock-input" type="password" id="pass1" placeholder="Contraseña del sistema"/>
-    </div>
-
-    <div class="field">
-      <label class="lock-label">INTRODUCE LA CLAVE QUE TE ENVIARON</label>
-      <input class="lock-input" type="password" id="pass2" placeholder="gsk_xxxxxxxxxxxxxxxxxxxx"/>
-    </div>
-
-    <div class="lock-err" id="lockErr"></div>
-    <button class="lock-btn" onclick="unlock()">Ingresar →</button>
+    <div class="lock-sub" id="lockMsg">Verificando sesión...</div>
   </div>
 </div>
 
@@ -455,37 +442,31 @@ let numSemanas = 1;
 // Variable global para guardar criterios generados (usada también por exportarExcelRubrica)
 let criteriosPorSemana = [];
 
-// ── LOCK ──
-function unlock(){
-  const p1  = document.getElementById('pass1').value.trim();
-  const p2  = document.getElementById('pass2').value.trim();
-  const err = document.getElementById('lockErr');
+// ── SESIÓN (viene de index.html vía sessionStorage) ──
+function verificarSesion(){
+  const auth = sessionStorage.getItem('pcrevive_auth');
+  const key  = sessionStorage.getItem('pcrevive_groq_key');
 
-  const hashIngresado = btoa(p1 + 'pdc_salt_2026');
-  if(btoa('pdc2026' + 'pdc_salt_2026') !== hashIngresado){
-    err.textContent = 'Contraseña incorrecta.';
-    return;
+  if(auth === 'ok' && key){
+    GROQ_KEY = key;
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    setWeeks(1, document.querySelector('.week-opt.active'));
+  } else {
+    // No hay sesión activa en esta pestaña: hay que ingresar desde la página principal
+    const msg = document.getElementById('lockMsg');
+    if(msg) msg.textContent = 'No hay sesión activa. Redirigiendo a la página principal...';
+    setTimeout(()=>{ window.location.href = 'index.html'; }, 900);
   }
-  if(p2.length < 20){
-    err.textContent = 'Ingresa una clave API de Groq válida.';
-    return;
-  }
-  GROQ_KEY = p2;
-  err.textContent = '';
-  document.getElementById('lockScreen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  setWeeks(1, document.querySelector('.week-opt.active'));
 }
 
 function logout(){
-  GROQ_KEY = '';
-  document.getElementById('lockScreen').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('pass1').value = '';
-  document.getElementById('pass2').value = '';
+  sessionStorage.removeItem('pcrevive_auth');
+  sessionStorage.removeItem('pcrevive_groq_key');
+  window.location.href = 'index.html';
 }
 
-document.addEventListener('keydown', e=>{ if(e.key==='Enter') unlock(); });
+document.addEventListener('DOMContentLoaded', verificarSesion);
 
 // ════════════════════════════════════════════
 //  SEMANAS

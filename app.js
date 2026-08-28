@@ -227,7 +227,7 @@ Responde ÚNICAMENTE con JSON válido (sin texto adicional, sin markdown, sin ba
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
       body: JSON.stringify({
         model: 'openai/gpt-oss-120b',
-        max_tokens:6000,
+        max_tokens:3500,
         temperature:0.5,
         response_format:{type:'json_object'},
         messages:[

@@ -226,7 +226,7 @@ Responde ÚNICAMENTE con JSON válido (sin texto adicional, sin markdown, sin ba
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
       body: JSON.stringify({
-        model:'llama-3.3-70b-versatile',
+        model: 'qwen/qwen3.6-27b', 
         max_tokens:6000,
         temperature:0.5,
         response_format:{type:'json_object'},

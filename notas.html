@@ -1018,7 +1018,7 @@ console.log(Array.from(document.querySelectorAll('table tbody tr')).map((tr,i) =
         <div class="step-use"><div class="step-use-num">2</div><p>Abre la consola: <code class="code-inline">F12</code> → pestaña <code class="code-inline">Console</code>.</p></div>
         <div class="step-use"><div class="step-use-num">3</div><p>Escribe <code class="code-inline">allow pasting</code> y presiona Enter (solo la primera vez).</p></div>
         <div class="step-use"><div class="step-use-num">4</div><p>Copia el script de abajo con el botón y pégalo con <code class="code-inline">Ctrl+V</code> → Enter.</p></div>
-        <div class="step-use"><div class="step-use-num">5</div><p>El script identifica a cada estudiante por <strong>nombre y apellido</strong> (no por posición), abre su modal y llena las notas <strong>una por una, con pausa entre cada campo</strong> (no todas de golpe), para que el SIE alcance a registrar cada valor antes de guardar. Si hay apellidos repetidos (gemelos), usa también el nombre para no confundirlos.</p></div>
+        <div class="step-use"><div class="step-use-num">5</div><p>El script identifica a cada estudiante por <strong>nombre y apellido</strong> (no por posición), abre su modal y llena las notas <strong>una por una, con pausa entre cada campo</strong> — además detecta y usa <strong>solo los campos editables del trimestre actual</strong>, ignorando las notas de trimestres anteriores que ya aparecen fijas (readonly) en el mismo modal. Si hay apellidos repetidos (gemelos), usa también el nombre para no confundirlos.</p></div>
         <div class="step-use"><div class="step-use-num">6</div><p>Al terminar la primera vuelta, el script <strong>reintenta automáticamente</strong> solo a los estudiantes que quedaron con error, por si el internet estuvo lento.</p></div>
         <div class="step-use"><div class="step-use-num">7</div><p>Al final verás un resumen con los estudiantes guardados correctamente y los que necesitan revisión manual.</p></div>
       </div>
@@ -1148,7 +1148,7 @@ function handleFileAuto(file) {
       }
       if (!sheetName) {
         showAlertAuto(
-          '<strong>No se encontró la hoja "CENTRALIZADOR 1T"</strong> en este archivo. ' +
+          '<strong>No se encontró la hoja "CENTRALIZADOR 2T"</strong> en este archivo. ' +
           'Puedes usar el modo manual abajo o subir otro Excel.',
           'danger'
         );
@@ -1536,6 +1536,7 @@ function actualizarScript() {
   const DELAY_GUARDAR = ${saveDelay};  // espera tras guardar
   const DELAY_RETRY_MODAL = ${retryDelay}; // espera extra si el modal tarda en aparecer
   const DELAY_ENTRE_NOTAS = ${notaDelay}; // espera al llenar cada nota (campo por campo)
+  const TOTAL_MATERIAS = ${materiasDetectadas.length}; // usado para verificar que el modal tenga el mismo n° de campos editables
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   const estudiantes = ${dataStr};
@@ -1642,6 +1643,29 @@ function actualizarScript() {
         await sleep(500);
         return false;
       }
+    }
+
+    // El modal del SIE muestra, para cada materia, un input por CADA
+    // trimestre ya transcurrido (readonly, con nota fija) y uno editable
+    // para el trimestre actual (readonly=false). Si tomáramos todos los
+    // inputs por posición cruda, contaríamos también los trimestres
+    // anteriores y las notas se escribirían en la celda equivocada.
+    // Por eso filtramos SOLO los campos editables (readonly=false):
+    // esos son, en orden, los del trimestre que se está cargando ahora.
+    const inputsEditables = Array.from(inputs).filter(inp => !inp.readOnly && !inp.disabled);
+
+    if (inputsEditables.length === 0) {
+      console.error('❌ No hay campos editables en el modal (¿todas las notas ya están fijas?): ' + est.paterno + ' ' + est.nombre);
+      const btnCerrar = document.querySelector('.modal [data-dismiss="modal"], .modal .btn-default');
+      if (btnCerrar) btnCerrar.click();
+      await sleep(500);
+      return false;
+    }
+
+    inputs = inputsEditables;
+
+    if (inputs.length !== TOTAL_MATERIAS) {
+      console.warn('  ⚠️ Se esperaban ' + TOTAL_MATERIAS + ' campos editables (materias) pero el modal tiene ' + inputs.length + '. Verifica el trimestre/mapeo si esto se repite en varios estudiantes.');
     }
 
     let notasCargadas = 0;

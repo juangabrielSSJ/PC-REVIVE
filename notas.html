@@ -797,7 +797,7 @@
     <div class="panel">
       <div class="panel-head">
         <span class="panel-num">ALT</span>
-        <span class="panel-title">¿Tu Excel no tiene la hoja CENTRALIZADOR 1T?</span>
+        <span class="panel-title">¿Tu Excel no tiene la hoja CENTRALIZADOR 2T?</span>
       </div>
       <p style="font-size:13px;color:var(--ink-2);margin-bottom:14px;">Usa el modo manual: primero pegas las materias del SIE, luego configuras las columnas y subes el archivo.</p>
       <div class="actions" style="margin-top:0;">
@@ -990,6 +990,22 @@ console.log(Array.from(document.querySelectorAll('table tbody tr')).map((tr,i) =
           <button type="button" onclick="setDelay('retry-input',10)">10s</button>
         </div>
       </div>
+      <div class="delay-row">
+        <span>Espera al llenar cada nota</span>
+        <div class="delay-input-wrap">
+          <input type="number" id="nota-input" min="0" step="0.1" value="0.4" oninput="actualizarScript()">
+          <span class="unit">segundos</span>
+        </div>
+        <div class="delay-quick">
+          <button type="button" onclick="setDelay('nota-input',0.4)">0.4s</button>
+          <button type="button" onclick="setDelay('nota-input',0.8)">0.8s</button>
+          <button type="button" onclick="setDelay('nota-input',1.5)">1.5s</button>
+        </div>
+      </div>
+      <div class="alert alert-info" style="margin-top:14px;margin-bottom:0;">
+        <span class="alert-icon">i</span>
+        <div>Si el SIE te dice que no puedes guardar porque "faltan notas" o hay valores raros, sube este último valor (espera por nota). Antes se llenaban todos los campos de golpe y el sistema se saltaba algunos; ahora se llenan uno por uno con esta pausa entre cada uno.</div>
+      </div>
     </div>
 
     <div class="panel">
@@ -1002,7 +1018,7 @@ console.log(Array.from(document.querySelectorAll('table tbody tr')).map((tr,i) =
         <div class="step-use"><div class="step-use-num">2</div><p>Abre la consola: <code class="code-inline">F12</code> → pestaña <code class="code-inline">Console</code>.</p></div>
         <div class="step-use"><div class="step-use-num">3</div><p>Escribe <code class="code-inline">allow pasting</code> y presiona Enter (solo la primera vez).</p></div>
         <div class="step-use"><div class="step-use-num">4</div><p>Copia el script de abajo con el botón y pégalo con <code class="code-inline">Ctrl+V</code> → Enter.</p></div>
-        <div class="step-use"><div class="step-use-num">5</div><p>El script identifica a cada estudiante por <strong>nombre y apellido</strong> (no por posición), abre su modal, llena las notas y guarda. Si hay apellidos repetidos (gemelos), usa también el nombre para no confundirlos.</p></div>
+        <div class="step-use"><div class="step-use-num">5</div><p>El script identifica a cada estudiante por <strong>nombre y apellido</strong> (no por posición), abre su modal y llena las notas <strong>una por una, con pausa entre cada campo</strong> (no todas de golpe), para que el SIE alcance a registrar cada valor antes de guardar. Si hay apellidos repetidos (gemelos), usa también el nombre para no confundirlos.</p></div>
         <div class="step-use"><div class="step-use-num">6</div><p>Al terminar la primera vuelta, el script <strong>reintenta automáticamente</strong> solo a los estudiantes que quedaron con error, por si el internet estuvo lento.</p></div>
         <div class="step-use"><div class="step-use-num">7</div><p>Al final verás un resumen con los estudiantes guardados correctamente y los que necesitan revisión manual.</p></div>
       </div>
@@ -1132,7 +1148,7 @@ function handleFileAuto(file) {
       }
       if (!sheetName) {
         showAlertAuto(
-          '<strong>No se encontró la hoja "CENTRALIZADOR 2T"</strong> en este archivo. ' +
+          '<strong>No se encontró la hoja "CENTRALIZADOR 1T"</strong> en este archivo. ' +
           'Puedes usar el modo manual abajo o subir otro Excel.',
           'danger'
         );
@@ -1493,6 +1509,7 @@ function actualizarScript() {
   const delay = getDelayMs('delay-input', 3000);
   const saveDelay = getDelayMs('save-input', 2000);
   const retryDelay = getDelayMs('retry-input', 2000);
+  const notaDelay = getDelayMs('nota-input', 400);
   const total = datosEstudiantes.length;
   const totalNotas = datosEstudiantes.reduce((s,e) => s + Object.keys(e.notas).length, 0);
   const dataStr = JSON.stringify(datosEstudiantes.map(e => ({
@@ -1518,6 +1535,7 @@ function actualizarScript() {
   const DELAY_MODAL   = ${delay};      // espera para que cargue el modal
   const DELAY_GUARDAR = ${saveDelay};  // espera tras guardar
   const DELAY_RETRY_MODAL = ${retryDelay}; // espera extra si el modal tarda en aparecer
+  const DELAY_ENTRE_NOTAS = ${notaDelay}; // espera al llenar cada nota (campo por campo)
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   const estudiantes = ${dataStr};
@@ -1627,19 +1645,55 @@ function actualizarScript() {
     }
 
     let notasCargadas = 0;
-    inputs.forEach((inp, idx) => {
-      if (est.notas[idx] !== undefined) {
-        inp.value = '';
-        inp.value = est.notas[idx];
+    let notasConProblema = [];
+
+    // Llenamos las notas UNA POR UNA, con pausa entre cada una, para darle
+    // tiempo al SIE de procesar el campo antes de pasar al siguiente.
+    // Si se hace todo de golpe (como antes), el sistema puede saltarse
+    // campos en modales largos (ej. 2T con materias técnicas) y luego
+    // rechaza el guardado por notas "incompletas" o fuera de rango.
+    for (let idx = 0; idx < inputs.length; idx++) {
+      if (est.notas[idx] === undefined) continue;
+      const inp = inputs[idx];
+      const valorEsperado = String(est.notas[idx]);
+
+      // Enfocamos el campo como lo haría un humano
+      inp.focus();
+      await sleep(DELAY_ENTRE_NOTAS);
+
+      inp.value = '';
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+      await sleep(Math.max(60, Math.round(DELAY_ENTRE_NOTAS / 3)));
+
+      inp.value = valorEsperado;
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+      inp.dispatchEvent(new Event('change', { bubbles: true }));
+      inp.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
+      inp.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+
+      await sleep(DELAY_ENTRE_NOTAS);
+      inp.blur();
+      inp.dispatchEvent(new Event('blur', { bubbles: true }));
+      await sleep(Math.max(60, Math.round(DELAY_ENTRE_NOTAS / 3)));
+
+      // Verificamos que el valor realmente haya quedado en el campo
+      if (inp.value !== valorEsperado) {
+        console.warn('  ⚠️ Campo ' + idx + ' no retuvo el valor (' + valorEsperado + '), reintentando...');
+        inp.value = valorEsperado;
         inp.dispatchEvent(new Event('input', { bubbles: true }));
         inp.dispatchEvent(new Event('change', { bubbles: true }));
-        inp.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-        notasCargadas++;
+        await sleep(DELAY_ENTRE_NOTAS);
+        if (inp.value !== valorEsperado) notasConProblema.push(idx);
       }
-    });
 
-    console.log('  📝 ' + notasCargadas + ' notas llenadas');
-    await sleep(300);
+      notasCargadas++;
+    }
+
+    if (notasConProblema.length > 0) {
+      console.warn('  ⚠️ Campos que no se pudieron confirmar: ' + notasConProblema.join(', '));
+    }
+    console.log('  📝 ' + notasCargadas + ' notas llenadas (una por una)');
+    await sleep(400);
 
     const btnGuardar = document.querySelector('#modal-body ~ .modal-footer button.btn-primary') ||
                        document.querySelector('.modal-footer button.btn-primary') ||

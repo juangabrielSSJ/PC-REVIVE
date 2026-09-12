@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cargador de Notas SIE · v4</title>
+<title>Cargador de Notas SIE · v5</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -634,50 +634,53 @@
   }
   .hidden { display: none !important; }
 
-  /* ── DELAY ─────────────────────────────────────────────── */
+  /* ── DELAY (input numérico libre) ───────────────────────── */
   .delay-row {
     display: flex; align-items: center; gap: 14px;
     padding: 8px 0;
+    flex-wrap: wrap;
   }
   .delay-row > span:first-child {
     font-size: 13px; color: var(--ink-2);
     flex: 0 0 auto; min-width: 170px;
   }
-  .delay-row input[type=range] {
-    flex: 1;
-    height: 4px;
-    accent-color: var(--ink);
-    cursor: pointer;
-    -webkit-appearance: none;
-    background: var(--border);
-    border-radius: 100px;
-    outline: none;
+  .delay-input-wrap {
+    display: flex; align-items: center; gap: 8px;
   }
-  .delay-row input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none;
-    width: 16px; height: 16px;
-    border-radius: 50%;
-    background: var(--ink);
-    cursor: pointer;
-    border: 2px solid var(--surface);
-    box-shadow: var(--shadow-sm);
-  }
-  .delay-row input[type=range]::-moz-range-thumb {
-    width: 16px; height: 16px;
-    border-radius: 50%;
-    background: var(--ink);
-    cursor: pointer;
-    border: 2px solid var(--surface);
-  }
-  .delay-val {
-    font-family: var(--mono); font-size: 12px;
+  .delay-input-wrap input[type=number] {
+    width: 90px;
+    background: var(--surface);
+    border: 1px solid var(--border-2);
+    border-radius: 8px;
     color: var(--ink);
-    min-width: 54px;
-    text-align: right;
-    font-weight: 600;
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .delay-input-wrap input[type=number]:focus {
+    border-color: var(--ink);
+    box-shadow: 0 0 0 3px rgba(20,20,20,0.05);
+  }
+  .delay-input-wrap span.unit {
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+  }
+  .delay-quick {
+    display: flex; gap: 6px; margin-left: auto;
+  }
+  .delay-quick button {
+    font-family: var(--mono); font-size: 11px;
     background: var(--surface-2);
-    padding: 3px 8px;
-    border-radius: 5px;
+    border: 1px solid var(--border-2);
+    color: var(--ink-2);
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .delay-quick button:hover {
+    border-color: var(--ink); color: var(--ink);
   }
 
   /* ── DETECTED INFO BOX ─────────────────────────────────── */
@@ -742,7 +745,7 @@
     </div>
   </div>
   <div class="topbar-end">
-    <span class="version-pill">v4 · MODERNO</span>
+    <span class="version-pill">v5 · MATCH POR NOMBRE + REINTENTO</span>
   </div>
 </div>
 
@@ -750,7 +753,7 @@
 
   <div class="intro">
     <h2>Carga tus notas en minutos</h2>
-    <p>Sube tu Excel del <span class="hot">CENTRALIZADOR 1T</span> y este asistente generará el script que llenará el SIE automáticamente.</p>
+    <p>Sube tu Excel del <span class="hot">CENTRALIZADOR 2T</span> y este asistente generará el script que llenará el SIE automáticamente.</p>
   </div>
 
   <!-- PROGRESS STEPS -->
@@ -771,7 +774,7 @@
       <div class="hero-auto-grid">
         <div>
           <h3>⚡ Modo automático</h3>
-          <p>Sube tu archivo Excel y el sistema detectará automáticamente la hoja <strong>CENTRALIZADOR 1T</strong>, sus materias, columnas y datos.</p>
+          <p>Sube tu archivo Excel y el sistema detectará automáticamente la hoja <strong>CENTRALIZADOR 2T</strong>, sus materias, columnas y datos.</p>
           <div class="tag-row">
             <span class="hero-tag on">✓ Detecta materias</span>
             <span class="hero-tag on">✓ Detecta columnas</span>
@@ -947,17 +950,45 @@ console.log(Array.from(document.querySelectorAll('table tbody tr')).map((tr,i) =
       </div>
       <div class="alert alert-warn">
         <span class="alert-icon">!</span>
-        <div>Si tu internet o el SIE va lento, aumenta el tiempo de espera. Si va rápido, puedes bajarlo.</div>
+        <div>Escribe el tiempo que necesites en segundos (sin límite). Si tu internet o el SIE va lento, sube estos valores; si va rápido, bájalos.</div>
       </div>
       <div class="delay-row">
         <span>Espera entre estudiantes</span>
-        <input type="range" id="delay-slider" min="1000" max="8000" step="500" value="3000" oninput="actualizarDelay()">
-        <span class="delay-val" id="delay-val">3.0 s</span>
+        <div class="delay-input-wrap">
+          <input type="number" id="delay-input" min="0" step="0.5" value="3" oninput="actualizarScript()">
+          <span class="unit">segundos</span>
+        </div>
+        <div class="delay-quick">
+          <button type="button" onclick="setDelay('delay-input',3)">3s</button>
+          <button type="button" onclick="setDelay('delay-input',8)">8s</button>
+          <button type="button" onclick="setDelay('delay-input',15)">15s</button>
+          <button type="button" onclick="setDelay('delay-input',30)">30s</button>
+        </div>
       </div>
       <div class="delay-row">
         <span>Espera tras guardar</span>
-        <input type="range" id="save-slider" min="500" max="5000" step="500" value="2000" oninput="actualizarDelay()">
-        <span class="delay-val" id="save-val">2.0 s</span>
+        <div class="delay-input-wrap">
+          <input type="number" id="save-input" min="0" step="0.5" value="2" oninput="actualizarScript()">
+          <span class="unit">segundos</span>
+        </div>
+        <div class="delay-quick">
+          <button type="button" onclick="setDelay('save-input',2)">2s</button>
+          <button type="button" onclick="setDelay('save-input',5)">5s</button>
+          <button type="button" onclick="setDelay('save-input',10)">10s</button>
+          <button type="button" onclick="setDelay('save-input',20)">20s</button>
+        </div>
+      </div>
+      <div class="delay-row">
+        <span>Espera si el modal no carga</span>
+        <div class="delay-input-wrap">
+          <input type="number" id="retry-input" min="0" step="0.5" value="2" oninput="actualizarScript()">
+          <span class="unit">segundos</span>
+        </div>
+        <div class="delay-quick">
+          <button type="button" onclick="setDelay('retry-input',2)">2s</button>
+          <button type="button" onclick="setDelay('retry-input',5)">5s</button>
+          <button type="button" onclick="setDelay('retry-input',10)">10s</button>
+        </div>
       </div>
     </div>
 
@@ -971,8 +1002,9 @@ console.log(Array.from(document.querySelectorAll('table tbody tr')).map((tr,i) =
         <div class="step-use"><div class="step-use-num">2</div><p>Abre la consola: <code class="code-inline">F12</code> → pestaña <code class="code-inline">Console</code>.</p></div>
         <div class="step-use"><div class="step-use-num">3</div><p>Escribe <code class="code-inline">allow pasting</code> y presiona Enter (solo la primera vez).</p></div>
         <div class="step-use"><div class="step-use-num">4</div><p>Copia el script de abajo con el botón y pégalo con <code class="code-inline">Ctrl+V</code> → Enter.</p></div>
-        <div class="step-use"><div class="step-use-num">5</div><p>El script abre cada estudiante, llena las notas y guarda automáticamente. No toques el mouse mientras trabaja.</p></div>
-        <div class="step-use"><div class="step-use-num">6</div><p>Al terminar verás un resumen con los estudiantes guardados correctamente.</p></div>
+        <div class="step-use"><div class="step-use-num">5</div><p>El script identifica a cada estudiante por <strong>nombre y apellido</strong> (no por posición), abre su modal, llena las notas y guarda. Si hay apellidos repetidos (gemelos), usa también el nombre para no confundirlos.</p></div>
+        <div class="step-use"><div class="step-use-num">6</div><p>Al terminar la primera vuelta, el script <strong>reintenta automáticamente</strong> solo a los estudiantes que quedaron con error, por si el internet estuvo lento.</p></div>
+        <div class="step-use"><div class="step-use-num">7</div><p>Al final verás un resumen con los estudiantes guardados correctamente y los que necesitan revisión manual.</p></div>
       </div>
     </div>
 
@@ -999,7 +1031,7 @@ console.log(Array.from(document.querySelectorAll('table tbody tr')).map((tr,i) =
     </div>
   </div>
 
-  <div class="footer">SIE LOADER · v4 · LOCAL · NO DATA LEAVES YOUR BROWSER</div>
+  <div class="footer">SIE LOADER · v5 · LOCAL · NO DATA LEAVES YOUR BROWSER</div>
 
 </div>
 
@@ -1036,6 +1068,19 @@ function copiar(texto, btnId) {
 function copiarFinal() {
   actualizarScript();
   copiar(scriptFinal, 'btn-final');
+}
+
+// ═══════════ DELAY (inputs libres) ═════════════════════════
+function setDelay(id, val) {
+  document.getElementById(id).value = val;
+  actualizarScript();
+}
+function getDelayMs(id, fallback) {
+  const el = document.getElementById(id);
+  if (!el) return fallback;
+  const v = parseFloat(el.value);
+  if (isNaN(v) || v < 0) return fallback;
+  return Math.round(v * 1000);
 }
 
 // ═══════════ UTILS ═════════════════════════════════════════
@@ -1080,14 +1125,14 @@ function handleFileAuto(file) {
       workbookCache = wb;
       // Buscar hoja CENTRALIZADOR 1T (tolerante a variaciones)
       let sheetName = wb.SheetNames.find(n =>
-        normalizar(n).includes('CENTRALIZADOR') && /1\s*T/i.test(n)
+        normalizar(n).includes('CENTRALIZADOR') && /2\s*T/i.test(n)
       );
       if (!sheetName) {
         sheetName = wb.SheetNames.find(n => normalizar(n).includes('CENTRALIZADOR'));
       }
       if (!sheetName) {
         showAlertAuto(
-          '<strong>No se encontró la hoja "CENTRALIZADOR 1T"</strong> en este archivo. ' +
+          '<strong>No se encontró la hoja "CENTRALIZADOR 2T"</strong> en este archivo. ' +
           'Puedes usar el modo manual abajo o subir otro Excel.',
           'danger'
         );
@@ -1443,19 +1488,11 @@ function handleFileManual(file) {
   reader.readAsArrayBuffer(file);
 }
 
-// ═══════════ DELAY ═════════════════════════════════════════
-function actualizarDelay() {
-  const d = parseInt(document.getElementById('delay-slider').value);
-  const s = parseInt(document.getElementById('save-slider').value);
-  document.getElementById('delay-val').textContent = (d/1000).toFixed(1) + ' s';
-  document.getElementById('save-val').textContent = (s/1000).toFixed(1) + ' s';
-  if (datosEstudiantes.length > 0) actualizarScript();
-}
-
 // ═══════════ GENERAR SCRIPT ════════════════════════════════
 function actualizarScript() {
-  const delay = parseInt(document.getElementById('delay-slider').value);
-  const saveDelay = parseInt(document.getElementById('save-slider').value);
+  const delay = getDelayMs('delay-input', 3000);
+  const saveDelay = getDelayMs('save-input', 2000);
+  const retryDelay = getDelayMs('retry-input', 2000);
   const total = datosEstudiantes.length;
   const totalNotas = datosEstudiantes.reduce((s,e) => s + Object.keys(e.notas).length, 0);
   const dataStr = JSON.stringify(datosEstudiantes.map(e => ({
@@ -1463,9 +1500,12 @@ function actualizarScript() {
   })), null, 2);
 
   scriptFinal = `// ================================================
-// SCRIPT SIE - CARGA AUTOMÁTICA COMPLETA
+// SCRIPT SIE - CARGA AUTOMÁTICA COMPLETA (v5)
 // ${total} estudiantes · ${totalNotas} notas · ${materiasDetectadas.length} materias
 // Generado: ${new Date().toLocaleString('es-BO')}
+// - Identifica a cada estudiante por NOMBRE y APELLIDO (no por posición)
+// - Si hay apellidos repetidos (gemelos), usa también el nombre para diferenciar
+// - Reintenta automáticamente a los que fallaron en la primera vuelta
 // ================================================
 // INSTRUCCIONES:
 // 1. Abre el SIE y ve a la lista de estudiantes
@@ -1475,68 +1515,119 @@ function actualizarScript() {
 // ================================================
 
 (async function() {
-  const DELAY_MODAL   = ${delay};   // espera para que cargue el modal
-  const DELAY_GUARDAR = ${saveDelay}; // espera tras guardar
+  const DELAY_MODAL   = ${delay};      // espera para que cargue el modal
+  const DELAY_GUARDAR = ${saveDelay};  // espera tras guardar
+  const DELAY_RETRY_MODAL = ${retryDelay}; // espera extra si el modal tarda en aparecer
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   const estudiantes = ${dataStr};
 
-  let ok = 0, err = 0, saltados = 0;
+  // ── Normalización de texto (sin tildes, mayúsculas, sin espacios extra) ──
+  function normalizar(s) {
+    return (s || '').toString().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')
+      .toUpperCase().replace(/[^A-Z0-9 ]/g, '').replace(/\\s+/g, ' ').trim();
+  }
 
-  console.log('🚀 Iniciando carga de ' + estudiantes.length + ' estudiantes...');
+  // ── Extrae el texto de cada celda de una fila de la tabla del SIE ──
+  function celdasDeFila(fila) {
+    return Array.from(fila.querySelectorAll('td')).map(td => normalizar(td.textContent));
+  }
 
-  for (let i = 0; i < estudiantes.length; i++) {
-    const est = estudiantes[i];
-    console.log('\\n[' + (i+1) + '/' + estudiantes.length + '] Procesando: ' + est.paterno + ' ' + est.nombre);
+  // ── Verifica si una fila del SIE corresponde a un estudiante dado ──
+  // Compara por NOMBRE COMPLETO (apellido paterno + nombre, o + materno)
+  // en vez de por posición, para no confundir estudiantes con el mismo apellido.
+  function filaCoincideConEstudiante(fila, est) {
+    const textos = celdasDeFila(fila);
+    const textoCompleto = textos.join(' ');
+    const pat = normalizar(est.paterno);
+    const mat = normalizar(est.materno);
+    const nom = normalizar(est.nombre);
 
-    const filas = document.querySelectorAll('table tbody tr');
-    let botonModal = null;
+    if (!pat || !nom) return false;
 
+    // El apellido paterno y el nombre deben aparecer ambos en la fila.
+    const tienePaterno = textoCompleto.includes(pat) || textos.some(t => t === pat);
+    const tieneNombre  = textoCompleto.includes(nom)  || textos.some(t => t === nom);
+    if (!tienePaterno || !tieneNombre) return false;
+
+    return true; // Paterno + Nombre coinciden
+  }
+
+  // ── Puntaje de coincidencia: para desempatar gemelos usamos el materno también ──
+  // Cuantas más partes del nombre coincidan (paterno+materno+nombre), mejor.
+  function puntajeCoincidencia(fila, est) {
+    const textos = celdasDeFila(fila);
+    const textoCompleto = textos.join(' ');
+    const pat = normalizar(est.paterno);
+    const mat = normalizar(est.materno);
+    const nom = normalizar(est.nombre);
+    let score = 0;
+    if (pat && textoCompleto.includes(pat)) score += 1;
+    if (mat && textoCompleto.includes(mat)) score += 1;
+    if (nom && textoCompleto.includes(nom)) score += 1;
+    return score;
+  }
+
+  // ── Busca en la tabla la fila que mejor corresponde al estudiante ──
+  // Revisa TODAS las filas y elige la de mayor puntaje (para evitar
+  // que un gemelo con el mismo apellido tome la fila equivocada).
+  function buscarFilaEstudiante(est) {
+    const filas = Array.from(document.querySelectorAll('table tbody tr'));
+    let mejorFila = null, mejorScore = 0;
     for (const fila of filas) {
-      const celdas = Array.from(fila.querySelectorAll('td'));
-      const textos = celdas.map(c => c.textContent.trim().toUpperCase());
-      if (textos.includes(est.paterno)) {
-        botonModal = fila.querySelector('button.btn-danger') ||
-                     fila.querySelector('button.btn-circle.btn-danger') ||
-                     Array.from(fila.querySelectorAll('button')).find(b => b.classList.contains('btn-danger'));
-        break;
+      if (!filaCoincideConEstudiante(fila, est)) continue;
+      const score = puntajeCoincidencia(fila, est);
+      if (score > mejorScore) {
+        mejorScore = score;
+        mejorFila = fila;
       }
     }
+    return mejorFila;
+  }
 
+  function botonModalDeFila(fila) {
+    if (!fila) return null;
+    return fila.querySelector('button.btn-danger') ||
+           fila.querySelector('button.btn-circle.btn-danger') ||
+           Array.from(fila.querySelectorAll('button')).find(b => b.classList.contains('btn-danger'));
+  }
+
+  // ── Procesa un solo estudiante: abre modal, llena notas, guarda ──
+  // Devuelve true si se guardó correctamente, false si falló.
+  async function procesarEstudiante(est, indiceIntento, totalIntento) {
+    console.log('[' + indiceIntento + '/' + totalIntento + '] Procesando: ' + est.paterno + ' ' + est.materno + ' ' + est.nombre);
+
+    const fila = buscarFilaEstudiante(est);
+    if (!fila) {
+      console.warn('⚠️ No se encontró en la tabla (por nombre): ' + est.paterno + ' ' + est.nombre);
+      return false;
+    }
+
+    const botonModal = botonModalDeFila(fila);
     if (!botonModal) {
-      console.warn('⚠️ No encontrado en tabla: ' + est.paterno);
-      const filaPos = filas[i];
-      if (filaPos) {
-        botonModal = filaPos.querySelector('button.btn-danger') ||
-                     Array.from(filaPos.querySelectorAll('button')).find(b => b.classList.contains('btn-danger'));
-      }
-      if (!botonModal) { err++; saltados++; continue; }
+      console.warn('⚠️ Fila encontrada pero sin botón de modal: ' + est.paterno + ' ' + est.nombre);
+      return false;
     }
 
     botonModal.click();
     await sleep(DELAY_MODAL);
 
-    const modal = document.querySelector('.modal.in, .modal[style*="display: block"], .bs-example-modal-table');
-    const inputs = document.querySelectorAll('#modal-body input.nota');
-
+    let inputs = document.querySelectorAll('#modal-body input.nota');
     if (!inputs || inputs.length === 0) {
-      console.warn('⚠️ Modal no cargó para: ' + est.paterno + '. Esperando más...');
-      await sleep(2000);
-      const inputsRetry = document.querySelectorAll('#modal-body input.nota');
-      if (!inputsRetry || inputsRetry.length === 0) {
-        console.error('❌ Sin campos de nota: ' + est.paterno);
-        err++;
+      console.warn('⚠️ Modal no cargó aún para: ' + est.paterno + '. Esperando más...');
+      await sleep(DELAY_RETRY_MODAL);
+      inputs = document.querySelectorAll('#modal-body input.nota');
+      if (!inputs || inputs.length === 0) {
+        console.error('❌ Sin campos de nota: ' + est.paterno + ' ' + est.nombre);
         const btnCerrar = document.querySelector('.modal .btn-default, .modal [data-dismiss="modal"]');
         if (btnCerrar) btnCerrar.click();
         await sleep(500);
-        continue;
+        return false;
       }
     }
 
-    const inputsActuales = document.querySelectorAll('#modal-body input.nota');
     let notasCargadas = 0;
-
-    inputsActuales.forEach((inp, idx) => {
+    inputs.forEach((inp, idx) => {
       if (est.notas[idx] !== undefined) {
         inp.value = '';
         inp.value = est.notas[idx];
@@ -1561,17 +1652,45 @@ function actualizarScript() {
       btnGuardar.click();
       await sleep(DELAY_GUARDAR);
       console.log('  ✅ Guardado: ' + est.paterno + ' ' + est.nombre);
-      ok++;
+      return true;
     } else {
-      console.error('  ❌ Botón guardar no encontrado: ' + est.paterno);
-      err++;
+      console.error('  ❌ Botón guardar no encontrado: ' + est.paterno + ' ' + est.nombre);
       const btnCerrar = document.querySelector('.modal [data-dismiss="modal"], .modal .btn-default');
       if (btnCerrar) btnCerrar.click();
       await sleep(500);
+      return false;
     }
-
-    await sleep(400);
   }
+
+  // ── Ejecuta una pasada completa sobre una lista de estudiantes ──
+  // Devuelve la lista de los que fallaron.
+  async function ejecutarPasada(lista, etiqueta) {
+    const fallidos = [];
+    for (let i = 0; i < lista.length; i++) {
+      console.log('\\n[' + etiqueta + '] (' + (i+1) + '/' + lista.length + ')');
+      const exito = await procesarEstudiante(lista[i], i + 1, lista.length);
+      if (!exito) fallidos.push(lista[i]);
+      await sleep(400);
+    }
+    return fallidos;
+  }
+
+  console.log('🚀 Iniciando carga de ' + estudiantes.length + ' estudiantes (identificación por nombre)...');
+
+  // ── PRIMERA PASADA ──
+  const fallidosPrimeraPasada = await ejecutarPasada(estudiantes, 'Pasada 1');
+
+  let fallidosFinales = fallidosPrimeraPasada;
+
+  // ── SEGUNDA PASADA AUTOMÁTICA (solo reintenta los que fallaron) ──
+  if (fallidosPrimeraPasada.length > 0) {
+    console.log('\\n🔁 Reintentando automáticamente ' + fallidosPrimeraPasada.length + ' estudiante(s) que no se guardaron...');
+    await sleep(DELAY_GUARDAR);
+    fallidosFinales = await ejecutarPasada(fallidosPrimeraPasada, 'Reintento');
+  }
+
+  const ok = estudiantes.length - fallidosFinales.length;
+  const err = fallidosFinales.length;
 
   console.log('\\n╔══════════════════════════════╗');
   console.log('║     CARGA COMPLETADA         ║');
@@ -1580,7 +1699,13 @@ function actualizarScript() {
   console.log('║  ❌ Con error: ' + String(err).padEnd(14) + '║');
   console.log('║  📋 Total:    ' + String(estudiantes.length).padEnd(14) + '║');
   console.log('╚══════════════════════════════╝');
-  alert('Carga completada\\n\\n✅ Guardados correctamente: ' + ok + '\\n❌ Con error: ' + err + '\\n\\nRevisa la consola para ver detalles.');
+
+  if (fallidosFinales.length > 0) {
+    console.log('\\n⚠️ Estudiantes que necesitan revisión manual:');
+    fallidosFinales.forEach(e => console.log('  - ' + e.paterno + ' ' + e.materno + ' ' + e.nombre));
+  }
+
+  alert('Carga completada (con reintento automático incluido)\\n\\n✅ Guardados correctamente: ' + ok + '\\n❌ Con error tras reintento: ' + err + '\\n\\nRevisa la consola para ver el detalle de nombres.');
 })();`;
 
   document.getElementById('script-final-body').textContent = scriptFinal;

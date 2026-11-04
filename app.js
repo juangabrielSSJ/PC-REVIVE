@@ -1,7 +1,8 @@
-// ══ PDC Bolivia — versión profesional (criterios en viñetas + adaptaciones automáticas) ══
+// ══ PDC Bolivia — formato oficial (momentos con párrafos, criterios en viñetas, adaptaciones con etiquetas) ══
 let API_KEY = "";
 let datosSemanas = [null,null,null,null];
 let criteriosIA = {ser:[],saber:[],hacer:[]};
+const ORD = ['PRIMERA','SEGUNDA','TERCERA','CUARTA'];
 
 function actualizarParalelos(){}   // compatibilidad con el HTML antiguo
 function actualizarEstudiantes(){} // compatibilidad con el HTML antiguo
@@ -33,24 +34,38 @@ function setIAStatus(t,m){const e=document.getElementById('ia-status');e.classNa
 function mostrarLoading(t){document.getElementById('load-txt').textContent=t||'...';document.getElementById('loading').classList.add('on')}
 function ocultarLoading(){document.getElementById('loading').classList.remove('on')}
 
-// ── LISTAS (viñetas) ──
-// Convierte texto o arreglo en arreglo limpio de viñetas
+// ── LISTAS / PÁRRAFOS ──
+// Convierte texto (con saltos de línea o •) o arreglo en arreglo limpio
 function normalizarLista(x){
   const arr=Array.isArray(x)?x:String(x||'').split(/\n|•/);
   return arr.map(s=>String(s).replace(/^[\s\-–—*·•]+/,'').trim()).filter(Boolean);
 }
-// Un <textarea> usa saltos de línea; un <input> usa " • " como separador
+// <textarea> usa saltos de línea; <input> usa " • "
 function setLista(id,arr){
   const e=document.getElementById(id);if(!e)return;
   e.value=normalizarLista(arr).join(e.tagName==='TEXTAREA'?'\n':' • ');
 }
 function getLista(id){return normalizarLista(getValue(id))}
-function htmlLista(arr){
+
+// Separa "Etiqueta: descripción" (para metodología de adaptaciones)
+function splitEtq(t){
+  const m=String(t).match(/^([^:.]{3,70}):\s*([\s\S]+)$/);
+  return m?[m[1],m[2]]:null;
+}
+function htmlLista(arr,etq){
   const l=normalizarLista(arr);
-  return l.length?`<ul>${l.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'';
+  if(!l.length) return '';
+  return `<ul>${l.map(x=>{
+    const p=etq?splitEtq(x):null;
+    return `<li>${p?`<strong>${esc(p[0])}:</strong> ${esc(p[1])}`:esc(x)}</li>`;
+  }).join('')}</ul>`;
+}
+// Párrafos separados (momentos del proceso formativo y recursos)
+function htmlParrafos(arr,alinear){
+  return normalizarLista(arr).map(p=>`<div class="par"${alinear?` style="text-align:${alinear}"`:''}>${esc(p)}</div>`).join('');
 }
 
-// Cantidad de criterios (viñetas) por dimensión: 4 por defecto, o lo que pida el docente
+// Cantidad de criterios (viñetas) por dimensión
 function detectarNCriterios(){
   const sel=parseInt(getValue('f-nro-criterios'),10);
   if(sel>=2&&sel<=6) return sel;
@@ -65,20 +80,19 @@ function adaptacionPorDefecto(tema){
   const t=tema||'el tema del mes';
   return {
     metodo:[
-      'Conformación de grupos cooperativos heterogéneos, con roles definidos y tutoría entre pares.',
-      'Uso de material visual y concreto (láminas, esquemas, modelos manipulables) sobre '+t+'.',
-      'Instrucciones en pasos cortos y secuenciados, con ejemplos resueltos antes de la práctica autónoma.',
-      'Acompañamiento individual del maestro y tiempo adicional para completar las actividades.',
-      'Retroalimentación inmediata y refuerzo en cada momento del proceso formativo.'
+      'Uso de material visual: Empleo de láminas educativas de gran formato con esquemas y analogías sencillas sobre '+t+', que permitan fijar las nociones de forma intuitiva y colorida.',
+      'Explicaciones paso a paso: División de los contenidos y ejercicios en secuencias guiadas, desarrollando un procedimiento a la vez de manera pausada.',
+      'Apoyo individual: Orientación y tutoría personalizada del docente durante las actividades, complementada con el apoyo solidario de un compañero tutor dentro del equipo.',
+      'Aprendizaje práctico: Priorización de la interacción directa y concreta con los materiales para consolidar los principios teóricos mediante la acción.'
     ],
     resultados:[
-      'Reconoce y explica con apoyo los conceptos básicos del tema.',
-      'Participa activamente en el trabajo grupal asumiendo su rol.',
-      'Elabora un producto sencillo aplicando los pasos aprendidos.'
+      'El estudiante reconoce los conceptos fundamentales del tema y su aplicación en situaciones cotidianas de su hogar y comunidad.',
+      'El estudiante asimila los procedimientos básicos y los aplica de forma guiada, con seguridad y orden.',
+      'El estudiante participa activamente en los trabajos prácticos, integrándose socialmente y registrando datos básicos de forma guiada.'
     ],
-    ser:['Demuestra interés, respeto y colaboración con sus compañeros durante las actividades.','Valora el apoyo recibido y manifiesta perseverancia ante la dificultad.'],
-    saber:['Identifica los conceptos básicos del tema con ayuda de material visual.','Responde preguntas orales o escritas sencillas sobre lo aprendido.'],
-    hacer:['Realiza las prácticas con guía del maestro o de un compañero tutor.','Presenta un producto simplificado cumpliendo los criterios mínimos acordados.']
+    ser:['Manifiesta interés y esfuerzo propio en las tareas escolares y demuestra compañerismo al integrarse en las actividades.'],
+    saber:['Reconoce los conceptos fundamentales del tema, respondiendo con apoyo en evaluaciones orales o gráficas.'],
+    hacer:['Realiza las prácticas sencillas siguiendo pautas preestablecidas y presenta un producto simplificado.']
   };
 }
 
@@ -87,7 +101,7 @@ async function generarConIA(){
   const desc=getValue('ia-descripcion'), ctx=getValue('ia-contexto');
   const adapPedido=getValue('ia-adaptacion');
   const area=getValue('f-area')||'el área indicada';
-  const grado=getValue('f-grado')||'5to de Secundaria';
+  const grado=getValue('f-grado')||'6to de Secundaria';
   const tema=getValue('f-tema')||'el tema del mes';
   const objNivel=getValue('f-obj-nivel')||'(no proporcionado)';
   const nCrit=detectarNCriterios();
@@ -101,25 +115,40 @@ async function generarConIA(){
     ? 'Exactamente 4 viñetas por dimensión: una por semana, en orden (Semana 1, 2, 3, 4).'
     : `Exactamente ${nCrit} viñetas por dimensión, distribuidas en orden a lo largo de las 4 semanas (agrupa semanas si hay menos viñetas que semanas; reparte equitativamente si hay más).`;
 
-  const prompt=`Eres maestro boliviano experto en planificación curricular (Ley 070, Modelo Sociocomunitario Productivo, nivel secundario). Genera un PDC mensual profesional.
-Área: ${area} | Año: ${grado} | Tema: ${tema}
+  const prompt=`Eres maestro boliviano experto en planificación curricular (Ley 070 Avelino Siñani–Elizardo Pérez, Modelo Educativo Sociocomunitario Productivo, nivel secundario). Genera un PDC mensual profesional con el formato oficial de los PDC bolivianos.
+Área: ${area} | Año: ${grado} | Tema general del mes: ${tema}
 Objetivo Holístico de Nivel: ${objNivel}
 Contexto: ${ctx||'(sin contexto adicional)'}
-Semanas (herramientas, materiales, productos): ${desc}
+Semanas (temas, herramientas, materiales, productos): ${desc}
 Pedido de adaptación curricular del docente: ${adapPedido||'(no especificó: genera la adaptación de forma automática)'}
 
-REGLAS:
-- Usa las herramientas y productos que describe el docente en PRÁCTICA, PRODUCCIÓN y recursos. Producto distinto cada semana.
-- Coherencia: PRÁCTICA→TEORÍA→PRODUCCIÓN→VALORACIÓN.
-- Longitud: práctica 4-5 oraciones (2 actividades con pasos y materiales); teoría 3-4 oraciones con terminología técnica; producción 2-3 oraciones; valoración 2 oraciones (comunidad, Vivir Bien); recursos 5 líneas separadas por \\n.
-- objetivo: 3-4 líneas, verbo plural + valor (SER) + contenido (SABER) + método (HACER) + finalidad comunitaria, basado en el Objetivo Holístico.
-- criterios: son para CALIFICAR a los estudiantes. Cada dimensión es un ARREGLO de viñetas (strings). ${reglaCrit}
-  Cada viñeta: 25-35 palabras, verbo observable en tercera persona (ej. "Demuestra", "Explica", "Elabora"), contenido concreto de la semana e indicador de logro medible (ej. porcentaje, cantidad, calidad).
-  SER se deriva del momento de VALORACIÓN (actitudes, valores, trabajo comunitario); SABER del momento de TEORÍA (conceptos, terminología); HACER de la PRÁCTICA y PRODUCCIÓN (procedimientos y producto).
-- adaptacion (estudiantes con ritmo lento o dificultades de aprendizaje): si el docente pidió algo específico, respétalo. Si no, genérala automáticamente combinando estrategias reales de aula: trabajo en grupos cooperativos heterogéneos, tutoría entre pares, material educativo visual/manipulativo para todos, instrucciones graduales, tiempo adicional, retroalimentación individual, evaluación diferenciada. Vincúlala al tema "${tema}". "metodo" = 5 viñetas, "resultados" = 3 viñetas, y ser/saber/hacer = 2 viñetas básicas y alcanzables cada una.
+REGLAS GENERALES:
+- Adapta la naturaleza de las actividades al ÁREA (ciencias: observación del entorno, experimentación y laboratorio; matemática: problemas contextualizados; lenguaje/comunicación: lectura, análisis y producción de textos; ciencias sociales: investigación comunitaria y debate; técnica/artes: taller y proyecto, etc.).
+- Redacta en estilo nominal/técnico propio de los PDC bolivianos: "Observación guiada de...", "Diálogo comunitario a partir de...", "Explicación de...", "Elaboración de...", "Reflexión comunitaria sobre...". Vincula siempre con la comunidad y el contexto productivo.
+- Usa las herramientas, materiales y productos que describe el docente. Producto distinto cada semana. Respeta el orden de las semanas del docente.
+- Cada semana sigue la secuencia PRÁCTICA→TEORÍA→PRODUCCIÓN→VALORACIÓN, coherente con el contenido de esa semana.
 
-Responde SOLO JSON válido:
-{"objetivo":"","semanas":[{"contenido":"","practica":"","teoria":"","produccion":"","valoracion":"","recursos":""},{...},{...},{...}],
+FORMATO DE CADA SEMANA:
+- contenido: subtema de la semana (3 a 8 palabras).
+- practica: ARREGLO de exactamente 2 actividades, cada una de 1 oración corta (máx. 25 palabras).
+- teoria: ARREGLO de exactamente 2 párrafos, cada uno de 1 oración corta (máx. 25 palabras) con terminología técnica del área.
+- produccion: 1 oración (máx. 20 palabras) con el producto concreto de la semana.
+- valoracion: 1 oración (máx. 20 palabras) de reflexión comunitaria / Vivir Bien.
+- recursos: ARREGLO de 4 materiales muy cortos (2 a 5 palabras cada uno).
+SÉ BREVE: no repitas ideas ni agregues texto fuera del JSON.
+
+OTROS CAMPOS:
+- objetivo (objetivo de aprendizaje): 2-3 líneas (máx. 55 palabras), inicia con verbo en primera persona del plural (Fortalecemos, Desarrollamos, Valoramos...) + valor (SER) + estudio/análisis del contenido (SABER) + método o herramientas (HACER) + finalidad comunitaria, basado en el Objetivo Holístico de Nivel y el tema general.
+- criterios: son para CALIFICAR a los estudiantes. Cada dimensión es un ARREGLO de viñetas (strings). ${reglaCrit}
+  Cada viñeta: 15-20 palabras, verbo observable en tercera persona (ej. "Demuestra", "Explica", "Elabora"), contenido concreto de la semana e indicador de logro medible.
+  SER se deriva de la VALORACIÓN; SABER de la TEORÍA; HACER de la PRÁCTICA y PRODUCCIÓN.
+- adaptacion (estudiantes con ritmo lento o dificultades de aprendizaje): si el docente pidió algo específico, respétalo. Si no, genérala automáticamente vinculada al tema "${tema}".
+  "metodo" = exactamente 4 viñetas de máx. 20 palabras con formato "Título corto: descripción" (ej. "Uso de material visual: ...", "Explicaciones paso a paso: ...", "Apoyo individual: ...", "Aprendizaje práctico: ...").
+  "resultados" = exactamente 3 viñetas de máx. 15 palabras que inician con "El estudiante...".
+  "ser", "saber", "hacer" = 1 viñeta de máx. 15 palabras cada una.
+
+Responde SOLO JSON válido con esta estructura:
+{"objetivo":"","semanas":[{"contenido":"","practica":["",""],"teoria":["",""],"produccion":"","valoracion":"","recursos":["","","",""]},{...},{...},{...}],
 "criterios":{"ser":["..."],"saber":["..."],"hacer":["..."]},
 "adaptacion":{"metodo":["..."],"resultados":["..."],"ser":["..."],"saber":["..."],"hacer":["..."]}}
 Las "semanas" deben ser exactamente 4 objetos completos.`;
@@ -129,7 +158,8 @@ Las "semanas" deben ser exactamente 4 objetos completos.`;
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},
       body:JSON.stringify({
-        model:'openai/gpt-oss-120b',max_tokens:4500,temperature:0.5,
+        model:'openai/gpt-oss-120b',max_tokens:3500,temperature:0.5,
+        reasoning_effort:'low',
         response_format:{type:'json_object'},
         messages:[
           {role:'system',content:'Experto en educación boliviana SEP. Respondes solo JSON válido.'},
@@ -176,11 +206,13 @@ function renderCamposSemanas(semanas,crit){
   const f=(l,id,v,r)=>`<div class="campo"><label>${l}</label><textarea id="${id}" rows="${r}">${esc(v)}</textarea></div>`;
   const lst=l=>normalizarLista(l).join('\n');
   document.getElementById('campos-semanas').innerHTML=
-    semanas.map((s,i)=>box('📅 SEMANA '+(i+1),
-      `<div class="campo"><label>Contenido/Tema</label><input type="text" id="cs${i}-cont" value="${esc(s.contenido)}"></div>`+
-      f('Práctica',`cs${i}-prac`,s.practica,3)+f('Teoría',`cs${i}-teor`,s.teoria,3)+
-      f('Producción',`cs${i}-prod`,s.produccion,2)+f('Valoración',`cs${i}-val`,s.valoracion,2)+
-      f('Recursos (uno por línea)',`cs${i}-rec`,s.recursos,3)
+    semanas.map((s,i)=>box('📅 '+ORD[i]+' SEMANA',
+      `<div class="campo"><label>Contenido/Subtema</label><input type="text" id="cs${i}-cont" value="${esc(s.contenido)}"></div>`+
+      f('Práctica (una actividad por línea)',`cs${i}-prac`,lst(s.practica),6)+
+      f('Teoría (un párrafo por línea)',`cs${i}-teor`,lst(s.teoria),6)+
+      f('Producción',`cs${i}-prod`,lst(s.produccion),3)+
+      f('Valoración',`cs${i}-val`,lst(s.valoracion),3)+
+      f('Recursos (uno por línea)',`cs${i}-rec`,lst(s.recursos),5)
     )).join('')+
     box('🎯 CRITERIOS DE EVALUACIÓN (una viñeta por línea)',
       f('SER (actitudes y valores)','cr-ser',lst(crit.ser),5)+
@@ -200,6 +232,7 @@ function leerDatos(){
   semanas.forEach(s=>{s.recursos=s.recursos||'';s.practica=s.practica||'';s.teoria=s.teoria||'';s.produccion=s.produccion||'';s.valoracion=s.valoracion||'';s.contenido=s.contenido||''});
   const hayCrit=document.getElementById('cr-ser');
   return {
+    encabezado:getValue('f-encabezado'), // opcional: ej. "COMUNICARSE: 76418463 LIC. NOMBRE APELLIDO"
     nro:getValue('f-nro'),mes:getValue('f-mes'),distrito:getValue('f-distrito'),unidad:getValue('f-unidad'),
     grado:getValue('f-grado'),paralelo:getValue('f-paralelo'),trimestre:getValue('f-trimestre'),
     director:getValue('f-director'),maestro:getValue('f-maestro'),area:getValue('f-area'),fecha:getValue('f-fecha'),
@@ -219,6 +252,7 @@ function leerDatos(){
 const CSS_DOCUMENTO=`
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Times New Roman',Times,serif;color:#111;background:white;font-size:10pt}
+.pdc-enc{text-align:right;font-size:8pt;font-weight:bold;color:#1a3a6b;margin-bottom:3px}
 .pdc-cab{text-align:center;margin-bottom:5px}
 .pdc-t1{font-size:11.5pt;font-weight:bold;text-transform:uppercase;letter-spacing:1.5px;color:#1a3a6b;border-top:2.5px solid #1a3a6b;border-bottom:2.5px solid #1a3a6b;padding:4px 0;margin:3px 0}
 .pdc-t2{font-size:10pt;font-weight:bold;text-transform:uppercase;margin:2px 0}
@@ -232,11 +266,14 @@ body{font-family:'Times New Roman',Times,serif;color:#111;background:white;font-
 .tbl-pdc td{border:1px solid #333;padding:2px 3px;vertical-align:top;line-height:1.3}
 .tbl-pdc tr,.tbl-adap tr{page-break-inside:avoid}
 .cel-obj{background:#f0f4ff;font-size:7.5pt;text-align:justify}
-.cel-cont{background:#fff8e8;font-weight:bold;font-size:7pt;text-align:center;vertical-align:middle}
+.cel-cont{background:#fff8e8;font-size:7pt;text-align:center;vertical-align:middle}
+.cel-cont .tg{font-weight:bold;display:block;margin-bottom:8px}
 .cel-crit{background:#fafbff;font-size:7pt;line-height:1.35;text-align:justify}
 .cel-crit .bl{margin-bottom:6px}
-.sl{font-weight:bold;color:#1a3a6b;font-size:7pt;text-transform:uppercase;background:#d0d8e8;padding:1px 3px;display:block;margin-bottom:2px}
-.sub{font-weight:bold;font-size:7pt}
+.sl{font-weight:bold;color:#1a3a6b;font-size:7pt;text-transform:uppercase;background:#d0d8e8;padding:1px 3px;display:block;margin-bottom:3px}
+.sub{font-weight:bold;font-size:7pt;display:block}
+.mom{margin-bottom:4px}
+.par{margin:0 0 3px;text-align:justify}
 .ct{font-weight:bold;color:#2d5fa8;font-size:7pt;text-transform:uppercase;display:block;border-bottom:.5px solid #9fb3d6;margin-bottom:1px}
 .cel-crit ul,.cel-ad ul{list-style:disc;padding-left:10px;margin:1px 0 0 2px}
 .cel-crit li,.cel-ad li{margin-bottom:2px;padding-left:1px}
@@ -254,8 +291,12 @@ body{font-family:'Times New Roman',Times,serif;color:#111;background:white;font-
 // ══ HTML DEL PDC ══
 function buildPDCInner(d){
   const c=d.criterios,a=d.adaptacion;
-  const br=t=>esc(t).replace(/\n/g,'<br>');
+  const momento=(t,x)=>{
+    const l=normalizarLista(x);
+    return l.length?`<div class="mom"><span class="sub">${t}:</span>${htmlParrafos(l)}</div>`:'';
+  };
   return `
+  ${d.encabezado?`<div class="pdc-enc">${esc(d.encabezado)}</div>`:''}
   <div class="pdc-cab">
     <div class="pdc-t1">EDUCACIÓN SECUNDARIA COMUNITARIA PRODUCTIVA</div>
     <div class="pdc-t2">PLAN DE DESARROLLO CURRICULAR N°${esc(d.nro)} &nbsp;&nbsp;&nbsp; MES: ${esc(d.mes)}</div>
@@ -280,13 +321,13 @@ function buildPDCInner(d){
     <tbody>
     ${d.semanas.map((s,i)=>`<tr>
       ${i===0?`<td class="cel-obj" rowspan="4">${esc(d.objetivo)}</td>`:''}
-      <td class="cel-cont">${i===0?`<strong>${esc(d.tema)}</strong><br><br>`:''}<span style="font-weight:normal;font-style:italic;font-size:7pt">${esc(s.contenido)}</span></td>
-      <td><span class="sl">SEMANA ${i+1}</span>
-        <span class="sub">PRÁCTICA:</span><br>${br(s.practica)}<br>
-        <span class="sub">TEORÍA:</span><br>${br(s.teoria)}<br>
-        <span class="sub">PRODUCCIÓN:</span><br>${br(s.produccion)}<br>
-        <span class="sub">VALORACIÓN:</span><br>${br(s.valoracion)}</td>
-      <td style="font-size:7pt">${br(s.recursos)}</td>
+      <td class="cel-cont">${i===0?`<span class="tg">${esc(d.tema)}</span>`:''}${esc(s.contenido)}</td>
+      <td><span class="sl">${ORD[i]} SEMANA</span>
+        ${momento('PRÁCTICA',s.practica)}
+        ${momento('TEORÍA',s.teoria)}
+        ${momento('PRODUCCIÓN',s.produccion)}
+        ${momento('VALORACIÓN',s.valoracion)}</td>
+      <td style="font-size:7pt">${htmlParrafos(s.recursos,'left')}</td>
       <td style="text-align:center;font-weight:bold;color:#1a3a6b;font-size:7pt">Semana ${i+1}</td>
       ${i===0?`<td class="cel-crit" rowspan="4">
         <span class="sl">SEMANAS 1 – 4</span>
@@ -296,12 +337,12 @@ function buildPDCInner(d){
     </tr>`).join('')}
     </tbody>
   </table>
-  <div class="sec-tit">Adaptaciones curriculares: <span style="font-weight:normal;font-size:7.5pt">(Estudiantes con dificultades en el aprendizaje o ritmos de aprendizaje distinto y otros)</span></div>
+  <div class="sec-tit">Adaptaciones curriculares: <span style="font-weight:normal;font-size:7.5pt">(Estudiantes con: dificultades en el aprendizaje-generales y específicos-o ritmos de aprendizaje distinto y otros)</span></div>
   <table class="tbl-adap">
-    <thead><tr><th style="width:14%">Contenidos</th><th style="width:15%">Discapacidad / TDAH / TEA / Ritmo lento</th><th style="width:43%">Adaptación</th><th style="width:28%">Criterios de Evaluación</th></tr></thead>
+    <thead><tr><th style="width:14%">Contenidos</th><th style="width:15%">Discapacidad / Talento Extraordinario / TDAH / TEA y otros</th><th style="width:43%">Adaptación</th><th style="width:28%">Criterios de Evaluación</th></tr></thead>
     <tbody><tr>
       <td class="etq-adap">${esc(d.tema)}</td><td class="etq-adap">Ritmo lento de aprendizaje</td>
-      <td class="cel-ad"><div class="h">Metodología</div>${htmlLista(a.metodo)}
+      <td class="cel-ad"><div class="h">Metodología</div>${htmlLista(a.metodo,true)}
         <div class="h" style="margin-top:5px">Resultados esperados</div>${htmlLista(a.resultados)}</td>
       <td class="cel-ad"><div class="h">Ser</div>${htmlLista(a.ser)}
         <div class="h" style="margin-top:4px">Saber</div>${htmlLista(a.saber)}
@@ -406,9 +447,13 @@ async function exportarWord(){
     const wr=(t,b,sz,col,it)=>`<w:r><w:rPr>${b?'<w:b/>':''}${it?'<w:i/>':''}${col?`<w:color w:val="${col}"/>`:''}<w:sz w:val="${sz||14}"/><w:szCs w:val="${sz||14}"/></w:rPr><w:t xml:space="preserve">${xe(t)}</w:t></w:r>`;
     // orden correcto del esquema: spacing → ind → jc
     const wp=(runs,jc,bf,af,ind)=>`<w:p><w:pPr><w:spacing w:before="${bf||20}" w:after="${af||20}"/>${ind||''}${jc?`<w:jc w:val="${jc}"/>`:''}</w:pPr>${runs}</w:p>`;
-    // viñeta con sangría francesa
-    const wb=(t,sz)=>wp(wr('•\u00A0',true,sz||12,'1A3A6B')+wr(t,false,sz||12),'both','10','20','<w:ind w:left="200" w:hanging="200"/>');
-    const wbl=(arr,sz)=>normalizarLista(arr).map(x=>wb(x,sz)).join('')||wp(wr(' '));
+    // viñeta con sangría francesa (con etiqueta en negrita opcional)
+    const wb=(t,sz,etq)=>{
+      const p=etq?splitEtq(t):null;
+      const cuerpo=p?wr(p[0]+': ',true,sz||12)+wr(p[1],false,sz||12):wr(t,false,sz||12);
+      return wp(wr('•\u00A0',true,sz||12,'1A3A6B')+cuerpo,'both','10','20','<w:ind w:left="200" w:hanging="200"/>');
+    };
+    const wbl=(arr,sz,etq)=>normalizarLista(arr).map(x=>wb(x,sz,etq)).join('')||wp(wr(' '));
     const wh=(t,col)=>wp(wr(t,true,12,col||'2D5FA8'),'','40','10');
     const B=['top','left','bottom','right'].map(s=>`<w:${s} w:val="single" w:sz="4" w:space="0" w:color="333333"/>`).join('');
     const wc=(inner,w,fill,vm)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${vm==='s'?'<w:vMerge w:val="restart"/>':vm==='c'?'<w:vMerge/>':''}<w:tcBorders>${B}</w:tcBorders>${fill?`<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>`:''}<w:tcMar><w:top w:w="40" w:type="dxa"/><w:left w:w="55" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="55" w:type="dxa"/></w:tcMar></w:tcPr>${inner}</w:tc>`;
@@ -416,7 +461,8 @@ async function exportarWord(){
     const wch=(t,w)=>wc(wp(wr(t,true,13,'FFFFFF'),'center'),w,'1A3A6B');
     const wtr=(cells,noSplit)=>`<w:tr>${noSplit?'<w:trPr><w:cantSplit/></w:trPr>':''}${cells}</w:tr>`;
     const wt=rows=>`<w:tbl><w:tblPr><w:tblW w:w="${W}" w:type="dxa"/><w:tblBorders>${B}<w:insideH w:val="single" w:sz="4" w:space="0" w:color="333333"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="333333"/></w:tblBorders></w:tblPr>${rows}</w:tbl>`;
-    const lines=(t,sz)=>String(t||'').split('\n').filter(l=>l.trim()).map(l=>wp(wr(l,false,sz||12))).join('')||wp(wr(' '));
+    // párrafos separados (una línea del arreglo = un párrafo)
+    const paras=(x,jc,sz)=>normalizarLista(x).map(l=>wp(wr(l,false,sz||12),jc||'','10','30')).join('')||wp(wr(' '));
 
     // Datos referenciales
     const e=Math.round(W*.21),v=Math.round(W/2)-e;
@@ -424,28 +470,32 @@ async function exportarWord(){
     const tblRef=wt(fila('DISTRITO EDUCATIVO',d.distrito,'UNIDAD EDUCATIVA',d.unidad)+fila('NIVEL','SECUNDARIO','AÑO DE ESCOLARIDAD',d.grado+' — PAR. '+d.paralelo)+fila('DIRECTOR (A)',d.director,'MAESTRO (A)',d.maestro)+fila('ÁREA',d.area,'TRIMESTRE',d.trimestre)+
       wtr(wcT('FECHA',e,'D0D8E8',true,13)+wc(wp(wr(d.fecha||' ',false,13)),W-e)));
 
-    // Tabla PDC con criterios en viñetas (celda combinada)
+    // Tabla PDC
     const w1=Math.round(W*.13),w2=Math.round(W*.12),w3=Math.round(W*.31),w4=Math.round(W*.11),w5=Math.round(W*.06),w6=W-w1-w2-w3-w4-w5;
     const critXml=wp(wr('SEMANAS 1 – 4',true,12,'1A3A6B'),'','40','40')+
       wh('SER')+wbl(c.ser)+wh('SABER')+wbl(c.saber)+wh('HACER')+wbl(c.hacer);
+    const momW=(k,x)=>{
+      const l=normalizarLista(x);
+      return l.length?wp(wr(k+':',true,12),'','40','10')+paras(l,'both'):'';
+    };
     const filas=d.semanas.map((s,i)=>{
-      const mom=wp(wr('SEMANA '+(i+1),true,12,'1A3A6B'))+
-        ['PRÁCTICA','TEORÍA','PRODUCCIÓN','VALORACIÓN'].map((k,j)=>wp(wr(k+': ',true,12)+wr([s.practica,s.teoria,s.produccion,s.valoracion][j],false,12),'both')).join('');
-      const cont=(i===0?wp(wr(d.tema,true,13),'center'):'')+wp(wr(s.contenido,false,12,null,true),'center');
+      const mom=wp(wr(ORD[i]+' SEMANA',true,12,'1A3A6B'),'','20','40')+
+        momW('PRÁCTICA',s.practica)+momW('TEORÍA',s.teoria)+momW('PRODUCCIÓN',s.produccion)+momW('VALORACIÓN',s.valoracion);
+      const cont=(i===0?wp(wr(d.tema,true,13),'center','20','160'):'')+wp(wr(s.contenido,false,12),'center');
       return wtr(
         (i===0?wc(wp(wr(d.objetivo,false,13),'both'),w1,'EEF2FF','s'):wc(wp(wr(' ')),w1,'EEF2FF','c'))+
-        wc(cont,w2,'FFF8E8')+wc(mom,w3)+wc(lines(s.recursos),w4)+
-        wc(wp(wr('Sem '+(i+1),true,12,'1A3A6B'),'center'),w5)+
+        wc(cont,w2,'FFF8E8')+wc(mom,w3)+wc(paras(s.recursos,'left',12),w4)+
+        wc(wp(wr('Semana '+(i+1),true,12,'1A3A6B'),'center'),w5)+
         (i===0?wc(critXml,w6,'FAFBFF','s'):wc(wp(wr(' ')),w6,'FAFBFF','c')),
-      true);
+      false);
     }).join('');
     const tblPDC=wt(wtr(wch('Objetivo de aprendizaje',w1)+wch('Contenidos',w2)+wch('Momentos del proceso formativo',w3)+wch('Recursos',w4)+wch('Periodos',w5)+wch('Criterios de evaluación',w6))+filas);
 
-    // Adaptaciones con viñetas
+    // Adaptaciones
     const a1=Math.round(W*.14),a2=Math.round(W*.15),a3=Math.round(W*.43),a4=W-a1-a2-a3;
-    const adMet=wh('METODOLOGÍA','1A3A6B')+wbl(a.metodo)+wh('RESULTADOS ESPERADOS','1A3A6B')+wbl(a.resultados);
+    const adMet=wh('METODOLOGÍA','1A3A6B')+wbl(a.metodo,12,true)+wh('RESULTADOS ESPERADOS','1A3A6B')+wbl(a.resultados);
     const adCrit=wh('SER')+wbl(a.ser)+wh('SABER')+wbl(a.saber)+wh('HACER')+wbl(a.hacer);
-    const tblAdap=wt(wtr(wch('Contenidos',a1)+wch('Discapacidad / TDAH / TEA / Ritmo lento',a2)+wch('Adaptación',a3)+wch('Criterios de Evaluación',a4))+
+    const tblAdap=wt(wtr(wch('Contenidos',a1)+wch('Discapacidad / Talento Extraordinario / TDAH / TEA y otros',a2)+wch('Adaptación',a3)+wch('Criterios de Evaluación',a4))+
       wtr(wcT(d.tema,a1,'EEF2FF',true,12,'center')+wcT('Ritmo lento de aprendizaje',a2,'EEF2FF',false,12,'center')+wc(adMet,a3)+wc(adCrit,a4),true));
 
     // Firmas
@@ -455,11 +505,12 @@ async function exportarWord(){
 
     const tit=(t,sz)=>wp(wr(t,true,sz,'1A3A6B'),'center','80','40');
     const sec=t=>wp(wr(t,true,16),'','60','30');
+    const enc=d.encabezado?wp(wr(d.encabezado,true,14,'1A3A6B'),'right'):'';
     const docXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
-${tit('EDUCACIÓN SECUNDARIA COMUNITARIA PRODUCTIVA',22)}${tit('PLAN DE DESARROLLO CURRICULAR N°'+d.nro+'   MES: '+d.mes,18)}
+${enc}${tit('EDUCACIÓN SECUNDARIA COMUNITARIA PRODUCTIVA',22)}${tit('PLAN DE DESARROLLO CURRICULAR N°'+d.nro+'   MES: '+d.mes,18)}
 ${sec('I. DATOS REFERENCIALES')}${tblRef}${sec('II. DESARROLLO')}
 ${wp(wr('Objetivo Holístico de Nivel:',true,15))}${wp(wr(d.objNivel||' ',false,14),'both')}
-${wp(wr(' '))}${tblPDC}${wp(wr(' '))}${sec('Adaptaciones curriculares')}${tblAdap}${wp(wr(' '))}${tblFirmas}
+${wp(wr(' '))}${tblPDC}${wp(wr(' '))}${sec('Adaptaciones curriculares: (Estudiantes con: dificultades en el aprendizaje-generales y específicos-o ritmos de aprendizaje distinto y otros)')}${tblAdap}${wp(wr(' '))}${tblFirmas}
 <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="737" w:right="737" w:bottom="737" w:left="737" w:header="0" w:footer="0" w:gutter="0"/></w:sectPr></w:body></w:document>`;
 
     const NS='http://schemas.openxmlformats.org/';
